@@ -1,9 +1,72 @@
 rules_version = '2';
 
 service cloud.firestore {
+
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+
+    match /users/{userId} {
+
+      allow read, write:
+        if request.auth != null
+        && request.auth.uid == userId;
+
     }
+
+
+    match /servers/{serverId} {
+
+      allow read:
+        if request.auth != null
+        && (
+          resource.data.members[request.auth.uid] == true
+          ||
+          resource.data.ownerId == request.auth.uid
+        );
+
+
+      allow create:
+        if request.auth != null
+        && request.resource.data.ownerId
+           == request.auth.uid;
+
+
+      allow update:
+        if request.auth != null
+        && (
+          resource.data.members[request.auth.uid] == true
+          ||
+          resource.data.ownerId == request.auth.uid
+        );
+
+
+      allow delete:
+        if request.auth != null
+        && resource.data.ownerId
+           == request.auth.uid;
+
+
+      match /incidents/{incidentId} {
+
+        allow read, create:
+          if request.auth != null
+          && get(
+               /databases/$(database)
+               /documents/servers/$(serverId)
+             ).data.members[request.auth.uid]
+             == true;
+
+        allow update, delete:
+          if request.auth != null
+          && get(
+               /databases/$(database)
+               /documents/servers/$(serverId)
+             ).data.members[request.auth.uid]
+             == true;
+
+      }
+
+    }
+
   }
+
 }
