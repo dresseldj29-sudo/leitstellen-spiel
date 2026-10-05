@@ -1,846 +1,933 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <title>ILS Leitstelle RP</title>
-
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  >
-
-  <link rel="stylesheet" href="style.css">
-</head>
-
-<body>
-
-<!-- =====================================================
-     LOGIN
-===================================================== -->
-
-<div id="loginScreen">
-
-  <div class="login-card">
-
-    <div class="logo">
-      🚨 ILS RP
-    </div>
-
-    <div class="subtitle">
-      Integrierte Leitstelle Multiplayer
-    </div>
-
-    <div class="login-tabs">
-
-      <button
-        id="loginTab"
-        class="tab active"
-        onclick="showLogin()"
-      >
-        Anmelden
-      </button>
-
-      <button
-        id="registerTab"
-        class="tab"
-        onclick="showRegister()"
-      >
-        Registrieren
-      </button>
-
-    </div>
-
-
-    <div id="loginForm">
-
-      <input
-        id="loginEmail"
-        type="email"
-        placeholder="E-Mail"
-      >
-
-      <input
-        id="loginPassword"
-        type="password"
-        placeholder="Passwort"
-      >
-
-      <button
-        class="main-button"
-        onclick="loginUser()"
-      >
-        ANMELDEN
-      </button>
-
-    </div>
-
-
-    <div
-      id="registerForm"
-      style="display:none"
-    >
-
-      <input
-        id="registerName"
-        type="text"
-        placeholder="Spielername"
-      >
-
-      <input
-        id="registerEmail"
-        type="email"
-        placeholder="E-Mail"
-      >
-
-      <input
-        id="registerPassword"
-        type="password"
-        placeholder="Passwort"
-      >
-
-      <button
-        class="main-button"
-        onclick="registerUser()"
-      >
-        KONTO ERSTELLEN
-      </button>
-
-    </div>
-
-
-    <div id="authMessage"></div>
-
-  </div>
-
-</div>
-
-
-<!-- =====================================================
-     SPIEL
-===================================================== -->
-
-<div
-  id="game"
-  style="display:none"
->
-
-
-  <!-- HEADER -->
-
-  <header class="topbar">
-
-    <div class="brand">
-      🚨 ILS LEITSTELLE
-    </div>
-
-
-    <div class="connection">
-
-      <span id="connectionDot">
-        🟢
-      </span>
-
-      <span id="connectionText">
-        Verbunden
-      </span>
-
-    </div>
-
-
-    <div class="server-info">
-
-      Server:
-
-      <strong id="serverName">
-        -
-      </strong>
-
-      <span id="serverCode">
-        -
-      </span>
-
-    </div>
-
-
-    <div class="top-actions">
-
-      <button onclick="openServerDialog()">
-        🖥 SERVER
-      </button>
-
-      <button onclick="openVehicleDialog()">
-        🚒 FAHRZEUG
-      </button>
-
-      <button onclick="openIncidentDialog()">
-        🚨 EINSATZ
-      </button>
-
-      <button onclick="toggleTheme()">
-        🌙
-      </button>
-
-      <button onclick="logoutUser()">
-        ⏻
-      </button>
-
-    </div>
-
-  </header>
-
-
-  <!-- MAIN -->
-
-  <div class="main-layout">
-
-
-    <!-- ================================================
-         LEFT
-    ================================================= -->
-
-    <aside class="left-panel">
-
-
-      <section>
-
-        <div class="section-title">
-          🚨 EINSÄTZE
-        </div>
-
-        <div id="incidentList">
-          Keine Einsätze
-        </div>
-
-      </section>
-
-
-      <section>
-
-        <div class="section-title">
-          🚒 FAHRZEUGE
-        </div>
-
-        <div id="vehicleList">
-          Keine Fahrzeuge
-        </div>
-
-      </section>
-
-
-      <section>
-
-        <div class="section-title">
-          👥 SPIELER
-        </div>
-
-        <div id="playerList">
-          -
-        </div>
-
-      </section>
-
-    </aside>
-
-
-    <!-- ================================================
-         MAP
-    ================================================= -->
-
-    <main id="map"></main>
-
-
-    <!-- ================================================
-         RIGHT
-    ================================================= -->
-
-    <aside class="right-panel">
-
-
-      <!-- FUNK -->
-
-      <section>
-
-        <div class="section-title">
-          📻 FUNK
-        </div>
-
-
-        <select id="radioChannel">
-
-          <option value="leitstelle">
-            Kanal 1 – Leitstelle
-          </option>
-
-          <option value="feuerwehr">
-            Kanal 2 – Feuerwehr
-          </option>
-
-          <option value="rettung">
-            Kanal 3 – Rettungsdienst
-          </option>
-
-          <option value="polizei">
-            Kanal 4 – Polizei
-          </option>
-
-        </select>
-
-
-        <div
-          id="radioMessages"
-          class="radio-box"
-        ></div>
-
-
-        <input
-          id="radioText"
-          placeholder="Funknachricht..."
-        >
-
-
-        <button
-          class="wide-button"
-          onclick="sendRadioMessage()"
-        >
-          📻 FUNK SENDEN
-        </button>
-
-
-        <button
-          id="pttButton"
-          class="ptt-button"
-        >
-          🎙 PUSH TO TALK
-        </button>
-
-
-        <div id="voiceStatus">
-          ⚫ Funk nicht verbunden
-        </div>
-
-      </section>
-
-
-      <!-- MELDER -->
-
-      <section>
-
-        <div class="section-title">
-          📟 MELDER
-        </div>
-
-
-        <div
-          id="pagerStatus"
-          class="status ready"
-        >
-          🟢 Einsatzbereit
-        </div>
-
-
-        <button
-          class="wide-button"
-          onclick="testPager()"
-        >
-          📟 PROBEALARM
-        </button>
-
-      </section>
-
-
-      <!-- MIKROFON -->
-
-      <section>
-
-        <div class="section-title">
-          🎙 MIKROFON
-        </div>
-
-
-        <button
-          class="wide-button"
-          onclick="enableMicrophone()"
-        >
-          Mikrofon aktivieren
-        </button>
-
-
-        <div id="micStatus">
-          ⚫ Nicht aktiviert
-        </div>
-
-      </section>
-
-
-      <!-- ACCOUNT -->
-
-      <section>
-
-        <div class="section-title">
-          👤 ACCOUNT
-        </div>
-
-
-        <div id="accountName">
-          -
-        </div>
-
-      </section>
-
-    </aside>
-
-  </div>
-
-</div>
-
-
-<!-- =====================================================
-     SERVER DIALOG
-===================================================== -->
-
-<div
-  id="serverDialog"
-  class="modal"
->
-
-  <div class="modal-card">
-
-    <button
-      class="close"
-      onclick="closeModal('serverDialog')"
-    >
-      ×
-    </button>
-
-
-    <h2>
-      🖥 Server
-    </h2>
-
-
-    <h3>
-      Server erstellen
-    </h3>
-
-
-    <input
-      id="newServerName"
-      placeholder="Servername"
-    >
-
-
-    <button
-      class="main-button"
-      onclick="createServer()"
-    >
-      SERVER ERSTELLEN
-    </button>
-
-
-    <hr>
-
-
-    <h3>
-      Server beitreten
-    </h3>
-
-
-    <input
-      id="joinServerCode"
-      placeholder="Server-Code"
-    >
-
-
-    <button
-      class="main-button"
-      onclick="joinServer()"
-    >
-      BEITRETEN
-    </button>
-
-
-    <hr>
-
-
-    <h3>
-      Meine Server
-    </h3>
-
-
-    <div id="myServers">
-      Laden...
-    </div>
-
-  </div>
-
-</div>
-
-
-<!-- =====================================================
-     VEHICLE DIALOG
-===================================================== -->
-
-<div
-  id="vehicleDialog"
-  class="modal"
->
-
-  <div class="modal-card">
-
-    <button
-      class="close"
-      onclick="closeModal('vehicleDialog')"
-    >
-      ×
-    </button>
-
-
-    <h2>
-      🚒 Fahrzeug erstellen
-    </h2>
-
-
-    <input
-      id="vehicleName"
-      placeholder="Fahrzeugname, z.B. HLF 20"
-    >
-
-
-    <select id="vehicleType">
-
-      <option value="Feuerwehr">
-        🚒 Feuerwehr
-      </option>
-
-      <option value="Rettungsdienst">
-        🚑 Rettungsdienst
-      </option>
-
-      <option value="Polizei">
-        🚓 Polizei
-      </option>
-
-      <option value="THW">
-        🚧 THW
-      </option>
-
-    </select>
-
-
-    <input
-      id="vehicleMaxCrew"
-      type="number"
-      min="1"
-      max="20"
-      value="9"
-      placeholder="Maximale Besatzung"
-    >
-
-
-    <button
-      class="main-button"
-      onclick="createVehicle()"
-    >
-      FAHRZEUG ERSTELLEN
-    </button>
-
-  </div>
-
-</div>
-
-
-<!-- =====================================================
-     EINSATZ DIALOG
-===================================================== -->
-
-<div
-  id="incidentDialog"
-  class="modal"
->
-
-  <div class="modal-card large">
-
-    <button
-      class="close"
-      onclick="closeModal('incidentDialog')"
-    >
-      ×
-    </button>
-
-
-    <h2>
-      🚨 ILS Einsatzformular
-    </h2>
-
-
-    <label>
-      Einsatzstichwort
-    </label>
-
-    <select id="incidentKeyword">
-
-      <option>
-        B1 – Kleinbrand
-      </option>
-
-      <option>
-        B2 – Mittelbrand
-      </option>
-
-      <option>
-        B3 – Zimmerbrand
-      </option>
-
-      <option>
-        B4 – Gebäudebrand
-      </option>
-
-      <option>
-        THL – Verkehrsunfall
-      </option>
-
-      <option>
-        THL – Person in Gefahr
-      </option>
-
-      <option>
-        ABC – Gefahrstoff
-      </option>
-
-      <option>
-        RD – Medizinischer Notfall
-      </option>
-
-      <option>
-        POL – Verkehrsunfall
-      </option>
-
-    </select>
-
-
-    <label>
-      Straße
-    </label>
-
-    <input
-      id="incidentStreet"
-      placeholder="Musterstraße 12"
-    >
-
-
-    <label>
-      Ort
-    </label>
-
-    <input
-      id="incidentCity"
-      placeholder="Nürnberg"
-      value="Nürnberg"
-    >
-
-
-    <label>
-      Beschreibung
-    </label>
-
-    <textarea
-      id="incidentDescription"
-      placeholder="Was ist passiert?"
-    ></textarea>
-
-
-    <label>
-      Hinweise
-    </label>
-
-    <textarea
-      id="incidentNotes"
-      placeholder="Weitere Informationen"
-    ></textarea>
-
-
-    <label>
-      Einsatzmittel
-    </label>
-
-
-    <div class="checkbox-grid">
-
-      <label>
-        <input
-          type="checkbox"
-          class="resource"
-          value="Feuerwehr"
-          checked
-        >
-        🚒 Feuerwehr
-      </label>
-
-
-      <label>
-        <input
-          type="checkbox"
-          class="resource"
-          value="Rettungsdienst"
-        >
-        🚑 Rettungsdienst
-      </label>
-
-
-      <label>
-        <input
-          type="checkbox"
-          class="resource"
-          value="Polizei"
-        >
-        🚓 Polizei
-      </label>
-
-
-      <label>
-        <input
-          type="checkbox"
-          class="resource"
-          value="THW"
-        >
-        🚧 THW
-      </label>
-
-    </div>
-
-
-    <button
-      class="alarm-button"
-      onclick="createIncident()"
-    >
-      🚨 EINSATZ AUSLÖSEN
-    </button>
-
-  </div>
-
-</div>
-
-
-<!-- =====================================================
-     FAHRZEUG DETAILS
-===================================================== -->
-
-<div
-  id="vehicleDetailDialog"
-  class="modal"
->
-
-  <div class="modal-card">
-
-    <button
-      class="close"
-      onclick="closeModal('vehicleDetailDialog')"
-    >
-      ×
-    </button>
-
-
-    <div id="vehicleDetail">
-      -
-    </div>
-
-  </div>
-
-</div>
-
-
-<!-- =====================================================
-     EINSATZBERICHT
-===================================================== -->
-
-<div
-  id="reportDialog"
-  class="modal"
->
-
-  <div class="modal-card large">
-
-    <button
-      class="close"
-      onclick="closeModal('reportDialog')"
-    >
-      ×
-    </button>
-
-
-    <div id="reportContent">
-      -
-    </div>
-
-  </div>
-
-</div>
-
-
-<!-- =====================================================
-     ALARM OVERLAY
-===================================================== -->
-
-<div
-  id="alarmOverlay"
->
-
-  <div class="alarm-card">
-
-    <div class="alarm-title">
-      🚨 EINSATZALARM
-    </div>
-
-
-    <div id="alarmText"></div>
-
-
-    <button
-      class="alarm-button"
-      onclick="acknowledgeAlarm()"
-    >
-      📟 ALARM QUITTIEREN
-    </button>
-
-  </div>
-
-</div>
-
-
-<!-- =====================================================
-     AUDIO
-===================================================== -->
-
-<audio
-  id="pagerSound"
-  preload="auto"
->
-  <source
-    src="assets/melder.mp3"
-    type="audio/mpeg"
-  >
-</audio>
-
-
-<!-- =====================================================
-     LEAFLET
-===================================================== -->
-
-<script
-  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-></script>
-
-
-<!-- =====================================================
-     APP
-===================================================== -->
-
-<script
-  type="module"
-  src="app.js"
-></script>
-
-</body>
-</html>
+:root {
+  --bg: #070a0f;
+  --panel: #0d121a;
+  --panel2: #111823;
+  --border: rgba(255,255,255,.08);
+  --text: #f5f7fa;
+  --muted: #8993a3;
+  --accent: #ff3347;
+  --accent2: #ff5969;
+  --green: #35df8b;
+  --yellow: #ffc857;
+  --blue: #4ca3ff;
+  --shadow: 0 25px 70px rgba(0,0,0,.4);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 80% 10%, rgba(255,51,71,.08), transparent 30%),
+    var(--bg);
+  color: var(--text);
+  font-family: Inter, Arial, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.hidden {
+  display: none !important;
+}
+
+
+/* LOGIN */
+
+.screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.login-card {
+  width: min(440px, 100%);
+  background: rgba(13,18,26,.96);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 35px;
+  box-shadow: var(--shadow);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.brand-icon,
+.mini-logo {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg,#ff3347,#8c0d1b);
+  font-weight: 900;
+  letter-spacing: -1px;
+}
+
+.brand-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 16px;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 23px;
+}
+
+.brand span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.login-tabs {
+  display: flex;
+  background: #080c12;
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 25px;
+}
+
+.login-tabs button {
+  flex: 1;
+  border: 0;
+  padding: 12px;
+  border-radius: 9px;
+  color: var(--muted);
+  background: transparent;
+}
+
+.login-tabs button.active {
+  color: white;
+  background: #1a202a;
+}
+
+label {
+  display: block;
+  color: #aeb6c4;
+  font-size: 12px;
+  font-weight: 700;
+  margin: 15px 0 7px;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  color: white;
+  background: #080d14;
+  border: 1px solid var(--border);
+  outline: none;
+  border-radius: 10px;
+  padding: 13px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+}
+
+textarea {
+  resize: vertical;
+}
+
+.primary-button,
+.secondary-button,
+.top-button {
+  border: 0;
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-weight: 800;
+}
+
+.primary-button {
+  color: white;
+  background: linear-gradient(135deg,#ff3347,#c91529);
+  box-shadow: 0 8px 25px rgba(255,51,71,.2);
+}
+
+.primary-button:hover {
+  filter: brightness(1.1);
+}
+
+.secondary-button {
+  color: white;
+  background: #1a202a;
+}
+
+.login-card .primary-button {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.error {
+  color: #ff6979;
+  margin-top: 15px;
+  font-size: 13px;
+}
+
+
+/* APP */
+
+#app {
+  min-height: 100vh;
+}
+
+.topbar {
+  height: 72px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(8,11,16,.92);
+  backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 30px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.top-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 230px;
+}
+
+.mini-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+
+.top-brand strong {
+  display: block;
+}
+
+.top-brand small {
+  color: var(--muted);
+}
+
+.server-area {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+}
+
+.server-area select {
+  max-width: 280px;
+}
+
+.top-button {
+  background: #1a202a;
+  color: white;
+}
+
+.top-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.online-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--green);
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 12px var(--green);
+}
+
+.icon-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #111721;
+  color: white;
+}
+
+
+/* LAYOUT */
+
+.layout {
+  display: grid;
+  grid-template-columns: 235px 1fr;
+  min-height: calc(100vh - 72px);
+}
+
+.sidebar {
+  border-right: 1px solid var(--border);
+  padding: 20px 13px;
+  background: rgba(9,13,19,.8);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 10px;
+}
+
+.sidebar-header b {
+  color: white;
+}
+
+.nav-button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  background: transparent;
+  color: #8993a3;
+  padding: 13px;
+  border-radius: 10px;
+  margin: 2px 0;
+  text-align: left;
+}
+
+.nav-button:hover,
+.nav-button.active {
+  background: #171d27;
+  color: white;
+}
+
+.nav-button.active {
+  box-shadow: inset 3px 0 var(--accent);
+}
+
+.nav-button span {
+  width: 22px;
+}
+
+.nav-button b {
+  margin-left: auto;
+  background: var(--accent);
+  border-radius: 20px;
+  padding: 2px 7px;
+  font-size: 10px;
+}
+
+.sidebar-spacer {
+  flex: 1;
+}
+
+.connection-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #111720;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.connection-card small {
+  display: block;
+  color: var(--muted);
+}
+
+
+/* CONTENT */
+
+.content {
+  padding: 28px;
+  max-width: 1700px;
+  width: 100%;
+  margin: auto;
+}
+
+.page-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.eyebrow {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+}
+
+h2 {
+  margin: 5px 0 0;
+  font-size: 30px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: linear-gradient(145deg,#101722,#0c1119);
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  padding: 20px;
+}
+
+.stat-card span {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.stat-card strong {
+  display: block;
+  font-size: 32px;
+  margin: 7px 0;
+}
+
+.stat-card small {
+  color: var(--muted);
+}
+
+
+/* DASHBOARD */
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 18px;
+}
+
+.panel-card {
+  background: #0d131c;
+  border: 1px solid var(--border);
+  border-radius: 17px;
+  overflow: hidden;
+}
+
+.card-title {
+  padding: 17px 19px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-title b {
+  display: block;
+}
+
+.card-title small {
+  color: var(--muted);
+}
+
+.live-label {
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+#map {
+  height: 580px;
+  background: #10151d;
+}
+
+.operation-list {
+  max-height: 580px;
+  overflow-y: auto;
+}
+
+.operation-item {
+  padding: 17px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.operation-item:hover {
+  background: #131a24;
+}
+
+.operation-item strong {
+  display: block;
+}
+
+.operation-item small {
+  color: var(--muted);
+}
+
+.operation-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.badge {
+  font-size: 10px;
+  padding: 4px 7px;
+  border-radius: 5px;
+  background: #202734;
+}
+
+.badge.red {
+  background: rgba(255,51,71,.15);
+  color: #ff6677;
+}
+
+.badge.green {
+  background: rgba(53,223,139,.12);
+  color: var(--green);
+}
+
+.empty {
+  color: var(--muted);
+  text-align: center;
+  padding: 50px 20px;
+}
+
+
+/* VEHICLES */
+
+.vehicle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill,minmax(260px,1fr));
+  gap: 15px;
+}
+
+.vehicle-card {
+  background: #0e151e;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  padding: 17px;
+}
+
+.vehicle-card-header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.vehicle-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: #1b222c;
+  font-size: 24px;
+}
+
+.vehicle-card h3 {
+  margin: 15px 0 4px;
+}
+
+.vehicle-card small {
+  color: var(--muted);
+}
+
+.vehicle-status {
+  margin-top: 15px;
+  border-radius: 8px;
+  padding: 8px;
+  background: #141c26;
+  font-size: 11px;
+}
+
+.vehicle-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.vehicle-actions button {
+  flex: 1;
+  border: 0;
+  padding: 9px;
+  border-radius: 8px;
+  color: white;
+  background: #1b222d;
+}
+
+
+/* RADIO */
+
+.radio-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 18px;
+}
+
+.radio-window {
+  height: 650px;
+  background: #080c11;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.radio-header {
+  padding: 15px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+}
+
+.radio-header span:last-child {
+  color: var(--green);
+}
+
+.radio-messages {
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+}
+
+.radio-message {
+  margin-bottom: 12px;
+}
+
+.radio-message .time {
+  color: #626d7c;
+  font-size: 10px;
+}
+
+.radio-message .name {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.radio-message .text {
+  color: #e0e5eb;
+}
+
+.radio-input {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.radio-input button {
+  border: 0;
+  border-radius: 8px;
+  padding: 0 17px;
+  background: var(--accent);
+  color: white;
+  font-weight: 800;
+}
+
+.radio-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.transmit-button {
+  min-height: 250px;
+  border: 1px solid #353e4b;
+  border-radius: 20px;
+  background: radial-gradient(circle,#202a37,#0e141c);
+  color: white;
+  font-size: 30px;
+}
+
+.transmit-button strong,
+.transmit-button small {
+  display: block;
+}
+
+.transmit-button strong {
+  font-size: 18px;
+  margin-top: 10px;
+}
+
+.transmit-button small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.transmit-button.active {
+  background: radial-gradient(circle,#4d1119,#190b0e);
+  border-color: var(--accent);
+  box-shadow: 0 0 35px rgba(255,51,71,.2);
+}
+
+.radio-info {
+  background: #111821;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 15px;
+}
+
+.radio-info span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.radio-info b {
+  display: block;
+  margin-top: 5px;
+}
+
+
+/* REPORTS */
+
+.reports-list {
+  display: grid;
+  gap: 12px;
+}
+
+.report-card {
+  background: #0e151e;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  padding: 18px;
+}
+
+.report-card h3 {
+  margin: 0 0 6px;
+}
+
+.report-card p {
+  color: #b8c0cc;
+  line-height: 1.6;
+}
+
+.report-footer {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+
+/* PLAYERS */
+
+.players-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill,minmax(250px,1fr));
+  gap: 15px;
+}
+
+.player-card {
+  background: #0e151e;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  padding: 17px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.player-avatar {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #222a35;
+  font-weight: 900;
+}
+
+
+/* MODALS */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.modal-card {
+  width: min(520px,100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #0d131c;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 25px;
+  box-shadow: var(--shadow);
+}
+
+.modal-card.large {
+  width: min(850px,100%);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.modal-header h2 {
+  font-size: 23px;
+}
+
+.close-modal {
+  border: 0;
+  background: #1a2029;
+  color: white;
+  width: 35px;
+  height: 35px;
+  border-radius: 9px;
+  font-size: 22px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 15px;
+}
+
+.ai-call {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #111923;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 15px;
+  margin-top: 15px;
+}
+
+.ai-call small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.ai-call button {
+  border: 0;
+  border-radius: 9px;
+  padding: 10px 13px;
+  background: #563f12;
+  color: #ffd878;
+}
+
+.generated-call {
+  background: #080d13;
+  border-left: 3px solid var(--accent);
+  padding: 15px;
+  margin-top: 10px;
+  line-height: 1.6;
+  color: #dce2ea;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+
+/* LEAFLET */
+
+.leaflet-container {
+  font-family: Inter, Arial, sans-serif;
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: #101722;
+  color: white;
+}
+
+.leaflet-popup-content {
+  margin: 13px;
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width: 1100px) {
+
+  .layout {
+    grid-template-columns: 75px 1fr;
+  }
+
+  .sidebar {
+    padding: 15px 8px;
+  }
+
+  .nav-button {
+    justify-content: center;
+  }
+
+  .nav-button span {
+    width: auto;
+  }
+
+  .nav-button:not(.active) {
+    font-size: 0;
+  }
+
+  .nav-button b {
+    display: none;
+  }
+
+  .connection-card {
+    justify-content: center;
+  }
+
+  .connection-card div {
+    display: none;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 800px) {
+
+  .topbar {
+    gap: 10px;
+  }
+
+  .top-brand {
+    min-width: auto;
+  }
+
+  .top-brand div:last-child {
+    display: none;
+  }
+
+  .server-area {
+    display: none;
+  }
+
+  .stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .radio-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .content {
+    padding: 15px;
+  }
+}
