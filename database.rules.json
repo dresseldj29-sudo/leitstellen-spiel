@@ -5,23 +5,41 @@
 
     ".write": "auth != null",
 
+
+    "users": {
+
+      "$uid": {
+
+        ".read":
+          "auth != null",
+
+        ".write":
+          "auth != null && auth.uid === $uid"
+
+      }
+
+    },
+
+
     "servers": {
 
       "$serverId": {
+
 
         "players": {
 
           "$uid": {
 
-            ".write":
-              "auth != null && auth.uid === $uid",
-
             ".read":
-              "auth != null"
+              "auth != null",
+
+            ".write":
+              "auth != null && auth.uid === $uid"
 
           }
 
         },
+
 
         "vehicles": {
 
@@ -30,19 +48,52 @@
             ".read":
               "auth != null",
 
+            ".write":
+              "auth != null",
+
             "crew": {
 
               "$uid": {
 
-                ".write":
-                  "auth != null && auth.uid === $uid",
-
                 ".read":
-                  "auth != null"
+                  "auth != null",
+
+                ".write":
+                  "auth != null && auth.uid === $uid"
 
               }
 
             }
+
+          }
+
+        },
+
+
+        "radio": {
+
+          "$channel": {
+
+            ".read":
+              "auth != null",
+
+            ".write":
+              "auth != null"
+
+          }
+
+        },
+
+
+        "voiceSignals": {
+
+          "$uid": {
+
+            ".read":
+              "auth != null && auth.uid === $uid",
+
+            ".write":
+              "auth != null"
 
           }
 
