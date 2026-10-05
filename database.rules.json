@@ -1,0 +1,56 @@
+{
+  "rules": {
+
+    ".read": "auth != null",
+
+    ".write": "auth != null",
+
+    "servers": {
+
+      "$serverId": {
+
+        "players": {
+
+          "$uid": {
+
+            ".write":
+              "auth != null && auth.uid === $uid",
+
+            ".read":
+              "auth != null"
+
+          }
+
+        },
+
+        "vehicles": {
+
+          "$vehicleId": {
+
+            ".read":
+              "auth != null",
+
+            "crew": {
+
+              "$uid": {
+
+                ".write":
+                  "auth != null && auth.uid === $uid",
+
+                ".read":
+                  "auth != null"
+
+              }
+
+            }
+
+          }
+
+        }
+
+      }
+
+    }
+
+  }
+}
