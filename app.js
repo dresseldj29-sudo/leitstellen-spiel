@@ -1,54 +1,50 @@
 import {
   initializeApp
-} from
-"https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 
 import {
   getAuth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-  updateProfile,
-  onAuthStateChanged
-} from
-"https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+  onAuthStateChanged,
+  updateProfile
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 
 import {
   getFirestore,
   collection,
-  doc,
   addDoc,
+  doc,
   setDoc,
-  getDoc,
-  getDocs,
   updateDoc,
-  query,
-  where,
+  deleteDoc,
+  getDoc,
   onSnapshot,
-  serverTimestamp
-} from
-"https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+  query,
+  orderBy,
+  serverTimestamp,
+  where
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
 import {
   getDatabase,
   ref,
-  set,
-  update,
-  remove,
   onValue,
-  onDisconnect,
-  push
-} from
-"https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
+  set,
+  push,
+  onDisconnect
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+
+import {
+  getStorage
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js";
 
 
-/* =====================================================
+/* =========================================================
    FIREBASE CONFIG
-=====================================================
-
-   HIER DEINE DATEN EINTRAGEN.
-
-===================================================== */
+   HIER DEINE FIREBASE DATEN EINTRAGEN
+   ========================================================= */
 
 const firebaseConfig = {
   apiKey: "AIzaSyDWD0EX3qY-JO-5TRRKO2UVaV3XXEkiFDk",
@@ -60,180 +56,762 @@ const firebaseConfig = {
   measurementId: "G-EDG6QHJ1PN"
 };
 
-/* =====================================================
-   FIREBASE
-===================================================== */
-
-const firebaseApp =
-  initializeApp(firebaseConfig);
-
-const auth =
-  getAuth(firebaseApp);
-
-const db =
-  getFirestore(firebaseApp);
-
-const realtime =
-  getDatabase(firebaseApp);
 
 
-/* =====================================================
-   VARIABLES
-===================================================== */
+/* =========================================================
+   FIREBASE START
+   ========================================================= */
+
+const firebaseApp = initializeApp(firebaseConfig);
+
+const auth = getAuth(firebaseApp);
+
+const db = getFirestore(firebaseApp);
+
+const realtimeDB = getDatabase(firebaseApp);
+
+const storage = getStorage(firebaseApp);
+
+
+/* =========================================================
+   GLOBAL STATE
+   ========================================================= */
 
 let currentUser = null;
 
 let currentServer = null;
 
-let map = null;
+let currentServerId = null;
 
-let vehicles = {};
+let vehicles = [];
 
-let incidents = {};
+let operations = [];
+
+let players = [];
+
+let reports = [];
+
+let radioMessages = [];
+
+let unsubscribeFunctions = [];
+
+let map;
 
 let vehicleMarkers = {};
 
-let incidentMarkers = {};
+let operationMarkers = {};
 
-let unsubscribeIncidents = null;
-
-let unsubscribeServer = null;
+let isRegisterMode = false;
 
 let microphoneStream = null;
 
-let peerConnections = {};
 
-let localVoiceChannel = null;
+/* =========================================================
+   DOM
+   ========================================================= */
 
-let audioContext = null;
-
-let voiceProcessor = null;
+const $ = id => document.getElementById(id);
 
 
-/* =====================================================
-   LOGIN
-===================================================== */
+/* =========================================================
+   AUTH UI
+   ========================================================= */
 
-window.showLogin = function () {
+$("loginTab").onclick = () => {
 
-  document.getElementById(
-    "loginForm"
-  ).style.display = "block";
+  isRegisterMode = false;
 
-  document.getElementById(
-    "registerForm"
-  ).style.display = "none";
+  $("loginTab").classList.add("active");
 
-  document.getElementById(
-    "loginTab"
-  ).classList.add("active");
+  $("registerTab").classList.remove("active");
 
-  document.getElementById(
-    "registerTab"
-  ).classList.remove("active");
+  $("displayName").classList.add("hidden");
+
+  $("authButton").textContent = "ANMELDEN";
 
 };
 
 
-window.showRegister = function () {
+$("registerTab").onclick = () => {
 
-  document.getElementById(
-    "loginForm"
-  ).style.display = "none";
+  isRegisterMode = true;
 
-  document.getElementById(
-    "registerForm"
-  ).style.display = "block";
+  $("registerTab").classList.add("active");
 
-  document.getElementById(
-    "loginTab"
-  ).classList.remove("active");
+  $("loginTab").classList.remove("active");
 
-  document.getElementById(
-    "registerTab"
-  ).classList.add("active");
+  $("displayName").classList.remove("hidden");
+
+  $("authButton").textContent = "KONTO ERSTELLEN";
 
 };
 
 
-/* =====================================================
-   REGISTER
-===================================================== */
+/* =========================================================
+   AUTH
+   ========================================================= */
 
-window.registerUser =
-async function () {
+$("authForm").addEventListener("submit", async event => {
 
-  const name =
-    document.getElementById(
-      "registerName"
-    ).value.trim();
+  event.preventDefault();
 
-  const email =
-    document.getElementById(
-      "registerEmail"
-    ).value.trim();
+  const email = $("email").value.trim();
 
-  const password =
-    document.getElementById(
-      "registerPassword"
-    ).value;
+  const password = $("password").value;
 
+  const displayName =
+    $("displayName").value.trim() || "Leitstellenmitarbeiter";
 
-  if (!name ||
-      !email ||
-      !password) {
-
-    showAuthMessage(
-      "Bitte alle Felder ausfüllen."
-    );
-
-    return;
-
-  }
-
-
-  if (password.length < 6) {
-
-    showAuthMessage(
-      "Das Passwort muss mindestens 6 Zeichen haben."
-    );
-
-    return;
-
-  }
-
+  $("authError").textContent = "";
 
   try {
 
-    const credential =
-      await createUserWithEmailAndPassword(
+    if (isRegisterMode) {
+
+      const result =
+        await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+      await updateProfile(
+        result.user,
+        {
+          displayName
+        }
+      );
+
+      await setDoc(
+        doc(db, "users", result.user.uid),
+        {
+          uid: result.user.uid,
+          email,
+          displayName,
+          createdAt: serverTimestamp()
+        }
+      );
+
+    } else {
+
+      await signInWithEmailAndPassword(
         auth,
         email,
         password
       );
 
+    }
 
-    await updateProfile(
-      credential.user,
-      {
-        displayName: name
+  } catch (error) {
+
+    console.error(error);
+
+    $("authError").textContent =
+      translateFirebaseError(error);
+
+  }
+
+});
+
+
+function translateFirebaseError(error) {
+
+  const code = error?.code || "";
+
+  const errors = {
+
+    "auth/invalid-email":
+      "Die E-Mail-Adresse ist ungültig.",
+
+    "auth/user-not-found":
+      "Dieses Konto existiert nicht.",
+
+    "auth/wrong-password":
+      "Das Passwort ist falsch.",
+
+    "auth/invalid-credential":
+      "E-Mail oder Passwort ist falsch.",
+
+    "auth/email-already-in-use":
+      "Diese E-Mail wird bereits verwendet.",
+
+    "auth/weak-password":
+      "Das Passwort ist zu schwach.",
+
+    "auth/network-request-failed":
+      "Netzwerkfehler."
+
+  };
+
+  return errors[code] || error.message;
+}
+
+
+/* =========================================================
+   AUTH STATE
+   ========================================================= */
+
+onAuthStateChanged(auth, async user => {
+
+  if (user) {
+
+    currentUser = user;
+
+    $("loginScreen").classList.add("hidden");
+
+    $("app").classList.remove("hidden");
+
+    $("userName").textContent =
+      user.displayName || user.email.split("@")[0];
+
+    await loadServers();
+
+    await createPresence();
+
+  } else {
+
+    currentUser = null;
+
+    $("loginScreen").classList.remove("hidden");
+
+    $("app").classList.add("hidden");
+
+  }
+
+});
+
+
+$("logoutButton").onclick = async () => {
+
+  await signOut(auth);
+
+};
+
+
+/* =========================================================
+   CLOCK
+   ========================================================= */
+
+setInterval(() => {
+
+  const now = new Date();
+
+  $("clock").textContent =
+    now.toLocaleTimeString("de-DE");
+
+}, 1000);
+
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+
+document.querySelectorAll(".nav-button")
+.forEach(button => {
+
+  button.addEventListener("click", () => {
+
+    document.querySelectorAll(".nav-button")
+      .forEach(b => b.classList.remove("active"));
+
+    button.classList.add("active");
+
+    document.querySelectorAll(".panel")
+      .forEach(panel => panel.classList.add("hidden"));
+
+    const target =
+      button.dataset.panel + "Panel";
+
+    $(target)?.classList.remove("hidden");
+
+  });
+
+});
+
+
+/* =========================================================
+   MODALS
+   ========================================================= */
+
+function openModal(id) {
+
+  $(id).classList.remove("hidden");
+
+}
+
+function closeModal(id) {
+
+  $(id).classList.add("hidden");
+
+}
+
+document.querySelectorAll("[data-close]")
+.forEach(button => {
+
+  button.onclick = () =>
+    closeModal(button.dataset.close);
+
+});
+
+
+$("createServerButton").onclick = () =>
+  openModal("serverModal");
+
+
+$("addVehicleButton").onclick = () =>
+  openModal("vehicleModal");
+
+
+$("newOperationButton").onclick = () =>
+  openModal("operationModal");
+
+
+$("newOperationButton2").onclick = () =>
+  openModal("operationModal");
+
+
+/* =========================================================
+   FIREBASE SERVERS
+   ========================================================= */
+
+async function loadServers() {
+
+  const serversRef =
+    collection(db, "servers");
+
+  const q =
+    query(
+      serversRef,
+      orderBy("createdAt", "desc")
+    );
+
+  const unsubscribe =
+    onSnapshot(q, snapshot => {
+
+      const select =
+        $("serverSelect");
+
+      select.innerHTML =
+        `<option value="">Server auswählen</option>`;
+
+      snapshot.forEach(serverDoc => {
+
+        const data = serverDoc.data();
+
+        const option =
+          document.createElement("option");
+
+        option.value =
+          serverDoc.id;
+
+        option.textContent =
+          data.name;
+
+        select.appendChild(option);
+
+      });
+
+    });
+
+  unsubscribeFunctions.push(unsubscribe);
+
+}
+
+
+/* =========================================================
+   CREATE SERVER
+   ========================================================= */
+
+$("serverForm").addEventListener("submit", async event => {
+
+  event.preventDefault();
+
+  if (!currentUser) return;
+
+  const name =
+    $("serverName").value.trim();
+
+  const description =
+    $("serverDescription").value.trim();
+
+  const code =
+    $("serverCode").value.trim().toUpperCase();
+
+
+  const server = await addDoc(
+    collection(db, "servers"),
+    {
+
+      name,
+
+      description,
+
+      code,
+
+      ownerId:
+        currentUser.uid,
+
+      ownerName:
+        currentUser.displayName ||
+        currentUser.email,
+
+      createdAt:
+        serverTimestamp(),
+
+      settings: {
+
+        maxPlayers: 20,
+
+        map: "germany",
+
+        realisticMode: true
+
+      }
+
+    }
+  );
+
+
+  await setDoc(
+    doc(
+      db,
+      "servers",
+      server.id,
+      "members",
+      currentUser.uid
+    ),
+    {
+
+      uid:
+        currentUser.uid,
+
+      name:
+        currentUser.displayName ||
+        currentUser.email,
+
+      role:
+        "owner",
+
+      joinedAt:
+        serverTimestamp()
+
+    }
+  );
+
+
+  $("serverForm").reset();
+
+  closeModal("serverModal");
+
+  $("serverSelect").value =
+    server.id;
+
+  await selectServer(server.id);
+
+});
+
+
+/* =========================================================
+   SERVER SELECT
+   ========================================================= */
+
+$("serverSelect").addEventListener(
+  "change",
+  async event => {
+
+    const serverId =
+      event.target.value;
+
+    if (!serverId) return;
+
+    await selectServer(serverId);
+
+  }
+);
+
+
+async function selectServer(serverId) {
+
+  clearRealtimeListeners();
+
+  currentServerId =
+    serverId;
+
+  const serverSnap =
+    await getDoc(
+      doc(db, "servers", serverId)
+    );
+
+  if (!serverSnap.exists()) {
+
+    alert("Server nicht gefunden.");
+
+    return;
+
+  }
+
+  currentServer = {
+
+    id: serverSnap.id,
+
+    ...serverSnap.data()
+
+  };
+
+  $("serverTitle").textContent =
+    currentServer.name;
+
+
+  subscribeVehicles();
+
+  subscribeOperations();
+
+  subscribePlayers();
+
+  subscribeReports();
+
+  subscribeRadio();
+
+  subscribeServerPresence();
+
+  initMap();
+
+}
+
+
+/* =========================================================
+   CLEAN LISTENERS
+   ========================================================= */
+
+function clearRealtimeListeners() {
+
+  unsubscribeFunctions.forEach(
+    unsubscribe => {
+
+      try {
+
+        unsubscribe();
+
+      } catch {}
+
+    }
+  );
+
+  unsubscribeFunctions = [];
+
+  vehicles = [];
+
+  operations = [];
+
+  players = [];
+
+  reports = [];
+
+  radioMessages = [];
+
+}
+
+
+/* =========================================================
+   VEHICLES REALTIME
+   ========================================================= */
+
+function subscribeVehicles() {
+
+  const refCollection =
+    collection(
+      db,
+      "servers",
+      currentServerId,
+      "vehicles"
+    );
+
+
+  const unsubscribe =
+    onSnapshot(
+      refCollection,
+      snapshot => {
+
+        vehicles =
+          snapshot.docs.map(
+            d => ({
+              id: d.id,
+              ...d.data()
+            })
+          );
+
+        renderVehicles();
+
+        updateStats();
+
+        updateMap();
+
       }
     );
 
 
-    await setDoc(
-      doc(
+  unsubscribeFunctions.push(unsubscribe);
+
+}
+
+
+/* =========================================================
+   VEHICLE UI
+   ========================================================= */
+
+function renderVehicles() {
+
+  const grid =
+    $("vehicleGrid");
+
+  if (!vehicles.length) {
+
+    grid.innerHTML =
+      `<div class="empty">
+        Noch keine Fahrzeuge vorhanden.
+       </div>`;
+
+    return;
+
+  }
+
+
+  grid.innerHTML =
+    vehicles.map(vehicle => {
+
+      const icon =
+        getVehicleIcon(vehicle.type);
+
+      return `
+
+        <div class="vehicle-card">
+
+          <div class="vehicle-card-header">
+
+            <div class="vehicle-icon">
+              ${icon}
+            </div>
+
+            <span class="badge ${vehicle.status === "available" ? "green" : "red"}">
+              ${vehicle.status === "available"
+                ? "VERFÜGBAR"
+                : vehicle.status === "alarm"
+                  ? "ALARM"
+                  : "EINSATZ"}
+            </span>
+
+          </div>
+
+          <h3>${escapeHtml(vehicle.name)}</h3>
+
+          <small>
+            ${escapeHtml(vehicle.type)}
+          </small>
+
+          <div class="vehicle-status">
+
+            Besatzung:
+            <b>${vehicle.crew?.length || 0}/${vehicle.seats || 0}</b>
+
+          </div>
+
+          <div class="vehicle-actions">
+
+            <button
+              onclick="openVehicle('${vehicle.id}')"
+            >
+              Details
+            </button>
+
+            <button
+              onclick="toggleVehicleStatus('${vehicle.id}')"
+            >
+              ${vehicle.status === "available"
+                ? "Besetzen"
+                : "Frei melden"}
+            </button>
+
+          </div>
+
+        </div>
+
+      `;
+
+    }).join("");
+
+}
+
+
+function getVehicleIcon(type) {
+
+  if (!type) return "🚒";
+
+  if (type.includes("RTW")) return "🚑";
+
+  if (type.includes("NEF")) return "🚑";
+
+  if (type.includes("POL")) return "🚓";
+
+  if (type.includes("DLK")) return "🚒";
+
+  if (type.includes("ELW")) return "📡";
+
+  return "🚒";
+
+}
+
+
+/* =========================================================
+   ADD VEHICLE
+   ========================================================= */
+
+$("vehicleForm").addEventListener(
+  "submit",
+  async event => {
+
+    event.preventDefault();
+
+    if (!currentServerId) {
+
+      alert("Bitte zuerst einen Server auswählen.");
+
+      return;
+
+    }
+
+
+    await addDoc(
+      collection(
         db,
-        "users",
-        credential.user.uid
+        "servers",
+        currentServerId,
+        "vehicles"
       ),
       {
 
-        displayName:
-          name,
+        name:
+          $("vehicleName").value.trim(),
 
-        email:
-          email,
+        type:
+          $("vehicleType").value,
+
+        seats:
+          Number($("vehicleSeats").value),
+
+        status:
+          "available",
+
+        crew:
+          [],
+
+        lat:
+          49.45,
+
+        lng:
+          11.08,
+
+        createdBy:
+          currentUser.uid,
 
         createdAt:
           serverTimestamp()
@@ -242,296 +820,882 @@ async function () {
     );
 
 
-  }
-  catch (error) {
+    $("vehicleForm").reset();
 
-    showAuthMessage(
-      firebaseError(error)
-    );
-
-  }
-
-};
-
-
-/* =====================================================
-   LOGIN
-===================================================== */
-
-window.loginUser =
-async function () {
-
-  const email =
-    document.getElementById(
-      "loginEmail"
-    ).value.trim();
-
-  const password =
-    document.getElementById(
-      "loginPassword"
-    ).value;
-
-
-  try {
-
-    await signInWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
-
-  }
-  catch (error) {
-
-    showAuthMessage(
-      firebaseError(error)
-    );
-
-  }
-
-};
-
-
-/* =====================================================
-   LOGOUT
-===================================================== */
-
-window.logoutUser =
-async function () {
-
-  if (
-    currentServer &&
-    currentUser
-  ) {
-
-    await remove(
-      ref(
-        realtime,
-        `servers/${currentServer.id}/players/${currentUser.uid}`
-      )
-    );
-
-  }
-
-
-  await signOut(auth);
-
-};
-
-
-/* =====================================================
-   AUTH STATE
-===================================================== */
-
-onAuthStateChanged(
-  auth,
-  async user => {
-
-    if (user) {
-
-      currentUser = user;
-
-      document.getElementById(
-        "loginScreen"
-      ).style.display = "none";
-
-      document.getElementById(
-        "game"
-      ).style.display = "block";
-
-
-      document.getElementById(
-        "accountName"
-      ).textContent =
-        user.displayName ||
-        user.email;
-
-
-      initializeMap();
-
-      await loadMyServers();
-
-      startPresence();
-
-      updateConnection(
-        true
-      );
-
-
-    }
-    else {
-
-      currentUser = null;
-
-      document.getElementById(
-        "loginScreen"
-      ).style.display = "flex";
-
-      document.getElementById(
-        "game"
-      ).style.display = "none";
-
-      updateConnection(
-        false
-      );
-
-    }
+    closeModal("vehicleModal");
 
   }
 );
 
 
-/* =====================================================
-   MAP
-===================================================== */
+/* =========================================================
+   VEHICLE STATUS
+   ========================================================= */
 
-function initializeMap() {
+window.toggleVehicleStatus =
+  async function(vehicleId) {
 
-  if (map)
-    return;
+    const vehicle =
+      vehicles.find(
+        v => v.id === vehicleId
+      );
+
+    if (!vehicle) return;
+
+    const newStatus =
+      vehicle.status === "available"
+        ? "occupied"
+        : "available";
 
 
-  map =
-    L.map(
-      "map"
-    ).setView(
-      [
-        49.4521,
-        11.0767
-      ],
-      13
+    await updateDoc(
+      doc(
+        db,
+        "servers",
+        currentServerId,
+        "vehicles",
+        vehicleId
+      ),
+      {
+
+        status:
+          newStatus
+
+      }
+    );
+
+  };
+
+
+/* =========================================================
+   VEHICLE DETAIL / CREW
+   ========================================================= */
+
+window.openVehicle =
+  function(vehicleId) {
+
+    const vehicle =
+      vehicles.find(
+        v => v.id === vehicleId
+      );
+
+    if (!vehicle) return;
+
+
+    const crew =
+      vehicle.crew || [];
+
+
+    $("vehicleDetail").innerHTML = `
+
+      <div class="modal-header">
+
+        <div>
+
+          <span class="eyebrow">
+            FAHRZEUG
+          </span>
+
+          <h2>
+            ${escapeHtml(vehicle.name)}
+          </h2>
+
+        </div>
+
+        <button
+          class="close-modal"
+          onclick="closeModal('vehicleDetailModal')"
+        >
+          ×
+        </button>
+
+      </div>
+
+      <p>
+        <b>Typ:</b>
+        ${escapeHtml(vehicle.type)}
+      </p>
+
+      <p>
+        <b>Status:</b>
+        ${vehicle.status}
+      </p>
+
+      <p>
+        <b>Besatzung:</b>
+        ${crew.length}/${vehicle.seats}
+      </p>
+
+      <h3>Besatzung</h3>
+
+      ${
+        crew.length
+        ? crew.map(
+            member =>
+              `<div class="player-card">
+                <div class="player-avatar">
+                  ${escapeHtml(member.name?.[0] || "?")}
+                </div>
+                <div>
+                  <b>${escapeHtml(member.name)}</b>
+                  <small>Fahrzeugbesatzung</small>
+                </div>
+              </div>`
+          ).join("")
+        : `<div class="empty">
+             Noch niemand eingeteilt.
+           </div>`
+      }
+
+      <button
+        class="primary-button"
+        style="width:100%;margin-top:15px"
+        onclick="joinVehicle('${vehicle.id}')"
+      >
+        🚒 Fahrzeug besetzen
+      </button>
+
+    `;
+
+
+    openModal("vehicleDetailModal");
+
+  };
+
+
+window.joinVehicle =
+  async function(vehicleId) {
+
+    const vehicle =
+      vehicles.find(
+        v => v.id === vehicleId
+      );
+
+    if (!vehicle) return;
+
+
+    const crew =
+      vehicle.crew || [];
+
+
+    if (
+      crew.some(
+        member =>
+          member.uid === currentUser.uid
+      )
+    ) {
+
+      alert(
+        "Du sitzt bereits auf diesem Fahrzeug."
+      );
+
+      return;
+
+    }
+
+
+    if (
+      crew.length >= vehicle.seats
+    ) {
+
+      alert(
+        "Das Fahrzeug ist voll."
+      );
+
+      return;
+
+    }
+
+
+    crew.push({
+
+      uid:
+        currentUser.uid,
+
+      name:
+        currentUser.displayName ||
+        currentUser.email
+
+    });
+
+
+    await updateDoc(
+      doc(
+        db,
+        "servers",
+        currentServerId,
+        "vehicles",
+        vehicleId
+      ),
+      {
+
+        crew,
+
+        status:
+          "occupied"
+
+      }
     );
 
 
-  L.tileLayer(
-    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    {
+    closeModal("vehicleDetailModal");
 
-      maxZoom: 19,
+  };
 
-      attribution:
-        "© OpenStreetMap contributors"
 
-    }
-  ).addTo(map);
+/* =========================================================
+   OPERATIONS
+   ========================================================= */
+
+function subscribeOperations() {
+
+  const refCollection =
+    collection(
+      db,
+      "servers",
+      currentServerId,
+      "operations"
+    );
+
+
+  const q =
+    query(
+      refCollection,
+      orderBy("createdAt", "desc")
+    );
+
+
+  const unsubscribe =
+    onSnapshot(
+      q,
+      snapshot => {
+
+        operations =
+          snapshot.docs.map(
+            d => ({
+              id: d.id,
+              ...d.data()
+            })
+          );
+
+
+        renderOperations();
+
+        updateStats();
+
+        updateMap();
+
+      }
+    );
+
+
+  unsubscribeFunctions.push(unsubscribe);
 
 }
 
 
-/* =====================================================
-   SERVER DIALOG
-===================================================== */
+/* =========================================================
+   CREATE OPERATION
+   ========================================================= */
 
-window.openServerDialog =
-function () {
+$("operationForm").addEventListener(
+  "submit",
+  async event => {
 
-  document.getElementById(
-    "serverDialog"
-  ).style.display = "flex";
+    event.preventDefault();
 
-  loadMyServers();
+    if (!currentServerId) {
 
-};
+      alert(
+        "Bitte zuerst einen Server auswählen."
+      );
 
+      return;
 
-window.openVehicleDialog =
-function () {
-
-  if (!currentServer) {
-
-    alert(
-      "Bitte zuerst einen Server erstellen oder beitreten."
-    );
-
-    return;
-
-  }
+    }
 
 
-  document.getElementById(
-    "vehicleDialog"
-  ).style.display = "flex";
+    const operation = {
 
-};
+      keyword:
+        $("operationKeyword").value,
 
+      address:
+        $("operationAddress").value.trim(),
 
-window.openIncidentDialog =
-function () {
+      city:
+        $("operationCity").value.trim(),
 
-  if (!currentServer) {
+      priority:
+        Number($("operationPriority").value),
 
-    alert(
-      "Bitte zuerst einen Server erstellen oder beitreten."
-    );
+      caller:
+        $("callerName").value.trim(),
 
-    return;
+      phone:
+        $("callerPhone").value.trim(),
 
-  }
+      description:
+        $("operationDescription").value.trim(),
 
+      generatedCall:
+        $("generatedCall").textContent || "",
 
-  document.getElementById(
-    "incidentDialog"
-  ).style.display = "flex";
+      status:
+        "open",
 
-};
-
-
-/* =====================================================
-   SERVER ERSTELLEN
-===================================================== */
-
-window.createServer =
-async function () {
-
-  const name =
-    document.getElementById(
-      "newServerName"
-    ).value.trim();
-
-
-  if (!name) {
-
-    alert(
-      "Bitte einen Servernamen eingeben."
-    );
-
-    return;
-
-  }
-
-
-  const code =
-    createServerCode();
-
-
-  const serverRef =
-    doc(
-      collection(
-        db,
-        "servers"
-      )
-    );
-
-
-  await setDoc(
-    serverRef,
-    {
-
-      name:
-        name,
-
-      code:
-        code,
-
-      ownerId:
+      createdBy:
         currentUser.uid,
 
-      members: {
+      createdByName:
+        currentUser.displayName,
 
-        [currentUser.uid]:
-          true
+      createdAt:
+        serverTimestamp(),
 
-      },
+      assignedVehicles:
+        [],
+
+      lat:
+        49.45 + (Math.random() - .5) * .1,
+
+      lng:
+        11.08 + (Math.random() - .5) * .1
+
+    };
+
+
+    const result =
+      await addDoc(
+        collection(
+          db,
+          "servers",
+          currentServerId,
+          "operations"
+        ),
+        operation
+      );
+
+
+    /* FUNKALARM */
+
+    await sendRadioMessage(
+      `🚨 ALARM: ${operation.keyword} – ${operation.address}, ${operation.city}`
+    );
+
+
+    /* MELDER */
+
+    playPagerAlarm();
+
+
+    $("operationForm").reset();
+
+    $("generatedCall").classList.add("hidden");
+
+    closeModal("operationModal");
+
+
+    /* Einsatzbericht */
+
+    await addDoc(
+      collection(
+        db,
+        "servers",
+        currentServerId,
+        "reports"
+      ),
+      {
+
+        operationId:
+          result.id,
+
+        keyword:
+          operation.keyword,
+
+        address:
+          operation.address,
+
+        city:
+          operation.city,
+
+        caller:
+          operation.caller,
+
+        description:
+          operation.description,
+
+        createdAt:
+          serverTimestamp(),
+
+        createdBy:
+          currentUser.displayName
+
+      }
+    );
+
+  }
+);
+
+
+/* =========================================================
+   RENDER OPERATIONS
+   ========================================================= */
+
+function renderOperations() {
+
+  const active =
+    operations.filter(
+      op => op.status !== "closed"
+    );
+
+
+  $("operationBadge").textContent =
+    active.length;
+
+
+  const html =
+    active.map(
+      operation => `
+
+      <div
+        class="operation-item"
+        onclick="focusOperation('${operation.id}')"
+      >
+
+        <strong>
+          🚨 ${escapeHtml(operation.keyword)}
+        </strong>
+
+        <small>
+          ${escapeHtml(operation.address)},
+          ${escapeHtml(operation.city)}
+        </small>
+
+        <div class="operation-meta">
+
+          <span class="badge red">
+            PRIORITÄT ${operation.priority}
+          </span>
+
+          <span class="badge">
+            ${operation.status}
+          </span>
+
+        </div>
+
+      </div>
+
+      `
+    ).join("");
+
+
+  $("operationList").innerHTML =
+    html ||
+    `<div class="empty">
+      Keine aktiven Einsätze
+    </div>`;
+
+
+  $("allOperations").innerHTML =
+    operations.map(
+      operation => `
+
+      <div class="report-card">
+
+        <h3>
+          🚨 ${escapeHtml(operation.keyword)}
+        </h3>
+
+        <p>
+          ${escapeHtml(operation.description || "Keine Beschreibung")}
+        </p>
+
+        <p>
+          📍
+          ${escapeHtml(operation.address)},
+          ${escapeHtml(operation.city)}
+        </p>
+
+        <div class="report-footer">
+
+          Status:
+          ${operation.status}
+
+          ·
+
+          Priorität:
+          ${operation.priority}
+
+          <br>
+
+          ${
+            operation.assignedVehicles?.length || 0
+          }
+          Fahrzeuge alarmiert
+
+        </div>
+
+        <div class="vehicle-actions">
+
+          <button
+            onclick="assignVehicle('${operation.id}')"
+          >
+            🚒 Fahrzeug alarmieren
+          </button>
+
+          <button
+            onclick="closeOperation('${operation.id}')"
+          >
+            Einsatz beenden
+          </button>
+
+        </div>
+
+      </div>
+
+      `
+    ).join("") ||
+    `<div class="empty">
+      Noch keine Einsätze
+    </div>`;
+
+}
+
+
+window.focusOperation =
+  function(operationId) {
+
+    const operation =
+      operations.find(
+        op => op.id === operationId
+      );
+
+    if (!operation || !map) return;
+
+
+    map.setView(
+      [
+        operation.lat,
+        operation.lng
+      ],
+      15
+    );
+
+
+    operationMarkers[
+      operationId
+    ]?.openPopup();
+
+  };
+
+
+/* =========================================================
+   ASSIGN VEHICLE
+   ========================================================= */
+
+window.assignVehicle =
+  async function(operationId) {
+
+    if (!vehicles.length) {
+
+      alert(
+        "Es gibt keine Fahrzeuge."
+      );
+
+      return;
+
+    }
+
+
+    const available =
+      vehicles.filter(
+        vehicle =>
+          vehicle.status === "available"
+      );
+
+
+    if (!available.length) {
+
+      alert(
+        "Kein Fahrzeug verfügbar."
+      );
+
+      return;
+
+    }
+
+
+    const vehicle =
+      available[0];
+
+
+    const operation =
+      operations.find(
+        op => op.id === operationId
+      );
+
+
+    if (!operation) return;
+
+
+    const assigned =
+      operation.assignedVehicles || [];
+
+
+    assigned.push(vehicle.id);
+
+
+    await updateDoc(
+      doc(
+        db,
+        "servers",
+        currentServerId,
+        "operations",
+        operationId
+      ),
+      {
+
+        assignedVehicles:
+          assigned,
+
+        status:
+          "dispatched"
+
+      }
+    );
+
+
+    await updateDoc(
+      doc(
+        db,
+        "servers",
+        currentServerId,
+        "vehicles",
+        vehicle.id
+      ),
+      {
+
+        status:
+          "alarm",
+
+        operationId
+
+      }
+    );
+
+
+    await sendRadioMessage(
+      `${vehicle.name} von Leitstelle alarmiert. Einsatz ${operation.keyword}, ${operation.address}.`
+    );
+
+    playPagerAlarm();
+
+  };
+
+
+/* =========================================================
+   CLOSE OPERATION
+   ========================================================= */
+
+window.closeOperation =
+  async function(operationId) {
+
+    const operation =
+      operations.find(
+        op => op.id === operationId
+      );
+
+    if (!operation) return;
+
+
+    await updateDoc(
+      doc(
+        db,
+        "servers",
+        currentServerId,
+        "operations",
+        operationId
+      ),
+      {
+
+        status:
+          "closed",
+
+        closedAt:
+          serverTimestamp(),
+
+        closedBy:
+          currentUser.displayName
+
+      }
+    );
+
+
+    for (
+      const vehicleId
+      of operation.assignedVehicles || []
+    ) {
+
+      await updateDoc(
+        doc(
+          db,
+          "servers",
+          currentServerId,
+          "vehicles",
+          vehicleId
+        ),
+        {
+
+          status:
+            "available",
+
+          operationId:
+            null
+
+        }
+      );
+
+    }
+
+
+    await sendRadioMessage(
+      `Einsatz ${operation.keyword} in ${operation.city} beendet.`
+    );
+
+  };
+
+
+/* =========================================================
+   AI NOTRUF
+   ========================================================= */
+
+$("generateCall").onclick =
+  function() {
+
+    const keyword =
+      $("operationKeyword").value;
+
+    const address =
+      $("operationAddress").value ||
+      "unbekannte Adresse";
+
+    const city =
+      $("operationCity").value ||
+      "unbekannter Ort";
+
+    const description =
+      $("operationDescription").value;
+
+
+    const calls = [
+
+      `Notruf: „112, hallo? In ${city} brennt es! Wir sind bei ${address}. Ich kann Rauch sehen. Bitte schicken Sie schnell die Feuerwehr!“`,
+
+      `Notruf: „Hallo, hier ist ein Notruf. Wir haben einen Einsatz bei ${address} in ${city}. Es geht um ${keyword}. Ich weiß nicht genau, wie schlimm es ist.“`,
+
+      `Notruf: „112? Bitte helfen Sie uns. Bei ${address} in ${city} ist etwas passiert. Es handelt sich um ${keyword}. Bitte schicken Sie Einsatzkräfte.“`
+
+    ];
+
+
+    let text =
+      calls[
+        Math.floor(
+          Math.random() * calls.length
+        )
+      ];
+
+
+    if (description) {
+
+      text +=
+        ` Weitere Angaben: ${description}`;
+
+    }
+
+
+    $("generatedCall").textContent =
+      text;
+
+    $("generatedCall")
+      .classList.remove("hidden");
+
+  };
+
+
+/* =========================================================
+   RADIO
+   ========================================================= */
+
+function subscribeRadio() {
+
+  const refCollection =
+    collection(
+      db,
+      "servers",
+      currentServerId,
+      "radio"
+    );
+
+
+  const q =
+    query(
+      refCollection,
+      orderBy("createdAt", "asc")
+    );
+
+
+  const unsubscribe =
+    onSnapshot(
+      q,
+      snapshot => {
+
+        radioMessages =
+          snapshot.docs.map(
+            d => ({
+              id: d.id,
+              ...d.data()
+            })
+          );
+
+
+        renderRadio();
+
+      }
+    );
+
+
+  unsubscribeFunctions.push(unsubscribe);
+
+}
+
+
+async function sendRadioMessage(text) {
+
+  if (!currentServerId) return;
+
+  if (!text.trim()) return;
+
+
+  await addDoc(
+    collection(
+      db,
+      "servers",
+      currentServerId,
+      "radio"
+    ),
+    {
+
+      text:
+        text.trim(),
+
+      userId:
+        currentUser.uid,
+
+      userName:
+        currentUser.displayName ||
+        "Leitstelle",
 
       createdAt:
         serverTimestamp()
@@ -539,1709 +1703,568 @@ async function () {
     }
   );
 
-
-  await setDoc(
-    doc(
-      db,
-      "servers",
-      serverRef.id,
-      "members",
-      currentUser.uid
-    ),
-    {
-
-      uid:
-        currentUser.uid,
-
-      name:
-        currentUser.displayName ||
-        currentUser.email,
-
-      joinedAt:
-        serverTimestamp()
-
-    }
-  );
-
-
-  await joinServer(
-    code
-  );
-
-
-  alert(
-    `Server erstellt!\n\nServer-Code:\n${code}`
-  );
-
-};
-
-
-/* =====================================================
-   SERVER CODE
-===================================================== */
-
-function createServerCode() {
-
-  const chars =
-    "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
-  let result =
-    "ILS-";
-
-
-  for (
-    let i = 0;
-    i < 6;
-    i++
-  ) {
-
-    result +=
-      chars[
-        Math.floor(
-          Math.random() *
-          chars.length
-        )
-      ];
-
-  }
-
-
-  return result;
-
 }
 
 
-/* =====================================================
-   SERVER BEITRETEN
-===================================================== */
+$("radioForm").addEventListener(
+  "submit",
+  async event => {
 
-window.joinServer =
-async function (
-  directCode = null
-) {
+    event.preventDefault();
 
-  const inputCode =
-    directCode ||
-    document.getElementById(
-      "joinServerCode"
-    ).value.trim().toUpperCase();
+    const input =
+      $("radioText");
 
-
-  if (!inputCode) {
-
-    alert(
-      "Bitte einen Server-Code eingeben."
+    await sendRadioMessage(
+      input.value
     );
 
-    return;
+    input.value = "";
 
   }
+);
 
 
-  const q =
-    query(
-      collection(
-        db,
-        "servers"
-      ),
-      where(
-        "code",
-        "==",
-        inputCode
-      )
-    );
+function renderRadio() {
 
+  $("radioMessages").innerHTML =
+    radioMessages.map(
+      message => {
 
-  const snapshot =
-    await getDocs(q);
+        let time = "";
 
+        if (
+          message.createdAt &&
+          message.createdAt.toDate
+        ) {
 
-  if (
-    snapshot.empty
-  ) {
+          time =
+            message.createdAt
+              .toDate()
+              .toLocaleTimeString(
+                "de-DE"
+              );
 
-    alert(
-      "Server nicht gefunden."
-    );
+        }
 
-    return;
 
-  }
+        return `
 
+          <div class="radio-message">
 
-  const serverDoc =
-    snapshot.docs[0];
+            <span class="time">
+              ${time}
+            </span>
 
+            <span class="name">
+              ${escapeHtml(
+                message.userName || "FUNK"
+              )}
+            </span>
 
-  const server =
-    serverDoc.data();
+            <div class="text">
+              ${escapeHtml(message.text)}
+            </div>
 
+          </div>
 
-  await updateDoc(
-    doc(
-      db,
-      "servers",
-      serverDoc.id
-    ),
-    {
-
-      [`members.${currentUser.uid}`]:
-        true
-
-    }
-  );
-
-
-  await setDoc(
-    doc(
-      db,
-      "servers",
-      serverDoc.id,
-      "members",
-      currentUser.uid
-    ),
-    {
-
-      uid:
-        currentUser.uid,
-
-      name:
-        currentUser.displayName ||
-        currentUser.email,
-
-      joinedAt:
-        serverTimestamp()
-
-    }
-  );
-
-
-  await enterServer(
-    serverDoc.id,
-    server
-  );
-
-};
-
-
-/* =====================================================
-   SERVER BETRETEN
-===================================================== */
-
-async function enterServer(
-  serverId,
-  server
-) {
-
-  currentServer = {
-
-    id:
-      serverId,
-
-    ...server
-
-  };
-
-
-  localStorage.setItem(
-    "currentServer",
-    serverId
-  );
-
-
-  localStorage.setItem(
-    "currentServerCode",
-    server.code
-  );
-
-
-  document.getElementById(
-    "serverName"
-  ).textContent =
-    server.name;
-
-
-  document.getElementById(
-    "serverCode"
-  ).textContent =
-    `(${server.code})`;
-
-
-  closeModal(
-    "serverDialog"
-  );
-
-
-  listenToServer();
-
-  listenToVehicles();
-
-  listenToIncidents();
-
-  listenToPlayers();
-
-  initializeVoiceSystem();
-
-}
-
-
-/* =====================================================
-   MEINE SERVER
-===================================================== */
-
-async function loadMyServers() {
-
-  if (!currentUser)
-    return;
-
-
-  const q =
-    query(
-      collection(
-        db,
-        "servers"
-      ),
-      where(
-        `members.${currentUser.uid}`,
-        "==",
-        true
-      )
-    );
-
-
-  const snapshot =
-    await getDocs(q);
-
-
-  const box =
-    document.getElementById(
-      "myServers"
-    );
-
-
-  box.innerHTML = "";
-
-
-  if (
-    snapshot.empty
-  ) {
-
-    box.innerHTML =
-      `<div class="small">
-        Noch keine Server.
-      </div>`;
-
-    return;
-
-  }
-
-
-  snapshot.forEach(
-    serverDoc => {
-
-      const data =
-        serverDoc.data();
-
-
-      const button =
-        document.createElement(
-          "button"
-        );
-
-
-      button.className =
-        "wide-button";
-
-
-      button.textContent =
-        `${data.name} – ${data.code}`;
-
-
-      button.onclick =
-        () =>
-          enterServer(
-            serverDoc.id,
-            data
-          );
-
-
-      box.appendChild(
-        button
-      );
-
-    }
-  );
-
-}
-
-
-/* =====================================================
-   LIVE SERVER
-===================================================== */
-
-function listenToServer() {
-
-  if (
-    unsubscribeServer
-  ) {
-
-    unsubscribeServer();
-
-  }
-
-
-  unsubscribeServer =
-    onSnapshot(
-      doc(
-        db,
-        "servers",
-        currentServer.id
-      ),
-      snapshot => {
-
-        if (!snapshot.exists())
-          return;
-
-
-        currentServer = {
-
-          id:
-            snapshot.id,
-
-          ...snapshot.data()
-
-        };
-
-
-        document.getElementById(
-          "serverName"
-        ).textContent =
-          currentServer.name;
-
-
-        document.getElementById(
-          "serverCode"
-        ).textContent =
-          `(${currentServer.code})`;
+        `;
 
       }
-    );
+    ).join("");
+
+
+  $("radioMessages").scrollTop =
+    $("radioMessages").scrollHeight;
 
 }
 
 
-/* =====================================================
-   FAHRZEUGE
-===================================================== */
+/* =========================================================
+   PAGER SOUND
+   ========================================================= */
 
-function listenToVehicles() {
+function playPagerAlarm() {
 
-  if (!currentServer)
-    return;
-
-
-  const vehicleRef =
-    ref(
-      realtime,
-      `servers/${currentServer.id}/vehicles`
+  const audio =
+    new Audio(
+      "https://actions.google.com/sounds/v1/alarms/beep_short.ogg"
     );
 
+  audio.volume = .8;
 
-  onValue(
-    vehicleRef,
-    snapshot => {
-
-      vehicles =
-        snapshot.val() || {};
-
-
-      renderVehicles();
-
-    }
-  );
+  audio.play()
+    .catch(() => {});
 
 }
 
 
-/* =====================================================
-   FAHRZEUG ERSTELLEN
-===================================================== */
+$("radioTransmit").addEventListener(
+  "mousedown",
+  startMicrophone
+);
 
-window.createVehicle =
-async function () {
+$("radioTransmit").addEventListener(
+  "mouseup",
+  stopMicrophone
+);
 
-  const name =
-    document.getElementById(
-      "vehicleName"
-    ).value.trim();
+$("radioTransmit").addEventListener(
+  "mouseleave",
+  stopMicrophone
+);
 
 
-  const type =
-    document.getElementById(
-      "vehicleType"
-    ).value;
+/* =========================================================
+   MICROPHONE
+   ========================================================= */
 
+async function startMicrophone() {
 
-  const maxCrew =
-    Number(
-      document.getElementById(
-        "vehicleMaxCrew"
-      ).value
-    );
+  try {
 
-
-  if (!name) {
-
-    alert(
-      "Bitte Fahrzeugnamen eingeben."
-    );
-
-    return;
-
-  }
-
-
-  const vehicleId =
-    push(
-      ref(
-        realtime,
-        `servers/${currentServer.id}/vehicles`
-      )
-    ).key;
-
-
-  const icons = {
-
-    Feuerwehr:
-      "🚒",
-
-    Rettungsdienst:
-      "🚑",
-
-    Polizei:
-      "🚓",
-
-    THW:
-      "🚧"
-
-  };
-
-
-  const vehicle = {
-
-    id:
-      vehicleId,
-
-    name:
-      name,
-
-    type:
-      type,
-
-    icon:
-      icons[type] || "🚨",
-
-    maxCrew:
-      maxCrew || 3,
-
-    status:
-      "ready",
-
-    lat:
-      49.4521,
-
-    lng:
-      11.0767,
-
-    crew:
-      {},
-
-    createdBy:
-      currentUser.uid
-
-  };
-
-
-  await set(
-    ref(
-      realtime,
-      `servers/${currentServer.id}/vehicles/${vehicleId}`
-    ),
-    vehicle
-  );
-
-
-  closeModal(
-    "vehicleDialog"
-  );
-
-
-  document.getElementById(
-    "vehicleName"
-  ).value = "";
-
-};
-
-
-/* =====================================================
-   FAHRZEUGE RENDERN
-===================================================== */
-
-function renderVehicles() {
-
-  const list =
-    document.getElementById(
-      "vehicleList"
-    );
-
-
-  list.innerHTML = "";
-
-
-  const entries =
-    Object.entries(
-      vehicles
-    );
-
-
-  if (!entries.length) {
-
-    list.innerHTML =
-      `<div class="small">
-        Keine Fahrzeuge vorhanden.
-      </div>`;
-
-    return;
-
-  }
-
-
-  entries.forEach(
-    ([id, vehicle]) => {
-
-      const crew =
-        vehicle.crew
-          ? Object.keys(
-              vehicle.crew
-            ).length
-          : 0;
-
-
-      const card =
-        document.createElement(
-          "div"
-        );
-
-
-      card.className =
-        "vehicle-card";
-
-
-      card.innerHTML = `
-
-        <div class="vehicle-name">
-          ${vehicle.icon}
-          ${escapeHtml(vehicle.name)}
-        </div>
-
-        <div class="small">
-          ${escapeHtml(vehicle.type)}
-        </div>
-
-        <div class="status ${vehicle.status}">
-          ${statusText(vehicle.status)}
-        </div>
-
-        <div class="small">
-          👥 ${crew}/${vehicle.maxCrew}
-        </div>
-
-        <div class="vehicle-buttons">
-
-          <button
-            onclick="takeSeat('${id}')"
-          >
-            👤 Einsteigen
-          </button>
-
-          <button
-            onclick="showVehicle('${id}')"
-          >
-            ℹ️ Info
-          </button>
-
-        </div>
-
-      `;
-
-
-      list.appendChild(
-        card
-      );
-
-
-      updateVehicleMarker(
-        id,
-        vehicle
-      );
-
-    }
-  );
-
-}
-
-
-/* =====================================================
-   STATUS
-===================================================== */
-
-function statusText(
-  status
-) {
-
-  const values = {
-
-    ready:
-      "🟢 Einsatzbereit",
-
-    alarm:
-      "🔴 Alarmiert",
-
-    enroute:
-      "🟡 Auf Anfahrt",
-
-    busy:
-      "🔴 Im Einsatz",
-
-    available:
-      "🟢 Verfügbar"
-
-  };
-
-
-  return (
-    values[status] ||
-    "⚫ Unbekannt"
-  );
-
-}
-
-
-/* =====================================================
-   FAHRZEUG MARKER
-===================================================== */
-
-function updateVehicleMarker(
-  id,
-  vehicle
-) {
-
-  if (!map)
-    return;
-
-
-  const position = [
-
-    Number(
-      vehicle.lat
-    ),
-
-    Number(
-      vehicle.lng
-    )
-
-  ];
-
-
-  if (
-    vehicleMarkers[id]
-  ) {
-
-    vehicleMarkers[id]
-      .setLatLng(
-        position
-      );
-
-    return;
-
-  }
-
-
-  const icon =
-    L.divIcon({
-
-      html: `
-
-        <div style="
-          width:42px;
-          height:42px;
-          border-radius:50%;
-          background:#1687ff;
-          border:3px solid white;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          font-size:21px;
-          box-shadow:0 2px 12px #000;
-        ">
-
-          ${vehicle.icon}
-
-        </div>
-
-      `,
-
-      iconSize:
-        [42,42],
-
-      iconAnchor:
-        [21,21]
-
-    });
-
-
-  vehicleMarkers[id] =
-    L.marker(
-      position,
-      {
-        icon
-      }
-    )
-    .addTo(map)
-    .bindPopup(
-      `<b>
-        ${escapeHtml(vehicle.name)}
-       </b>`
-    );
-
-}
-
-
-/* =====================================================
-   FAHRZEUG BESATZEN
-===================================================== */
-
-window.takeSeat =
-async function (
-  vehicleId
-) {
-
-  const vehicle =
-    vehicles[vehicleId];
-
-
-  if (!vehicle)
-    return;
-
-
-  const crew =
-    vehicle.crew || {};
-
-
-  if (
-    crew[currentUser.uid]
-  ) {
-
-    await remove(
-      ref(
-        realtime,
-        `servers/${currentServer.id}/vehicles/${vehicleId}/crew/${currentUser.uid}`
-      )
-    );
-
-    return;
-
-  }
-
-
-  const currentCrew =
-    Object.keys(
-      crew
-    ).length;
-
-
-  if (
-    currentCrew >=
-    Number(
-      vehicle.maxCrew
-    )
-  ) {
-
-    alert(
-      "Das Fahrzeug ist voll."
-    );
-
-    return;
-
-  }
-
-
-  await set(
-    ref(
-      realtime,
-      `servers/${currentServer.id}/vehicles/${vehicleId}/crew/${currentUser.uid}`
-    ),
-    {
-
-      uid:
-        currentUser.uid,
-
-      name:
-        currentUser.displayName ||
-        currentUser.email,
-
-      joinedAt:
-        Date.now()
-
-    }
-  );
-
-
-  const ownSeatRef =
-    ref(
-      realtime,
-      `servers/${currentServer.id}/vehicles/${vehicleId}/crew/${currentUser.uid}`
-    );
-
-
-  onDisconnect(
-    ownSeatRef
-  ).remove();
-
-};
-
-
-/* =====================================================
-   FAHRZEUG INFO
-===================================================== */
-
-window.showVehicle =
-function (
-  vehicleId
-) {
-
-  const vehicle =
-    vehicles[vehicleId];
-
-
-  if (!vehicle)
-    return;
-
-
-  const crew =
-    vehicle.crew || {};
-
-
-  let crewHtml =
-    "";
-
-
-  Object.values(
-    crew
-  ).forEach(
-    player => {
-
-      crewHtml += `
-        <div class="player-card">
-          👤 ${escapeHtml(player.name)}
-        </div>
-      `;
-
-    }
-  );
-
-
-  if (!crewHtml) {
-
-    crewHtml =
-      `<div class="small">
-        Noch keine Besatzung.
-      </div>`;
-
-  }
-
-
-  document.getElementById(
-    "vehicleDetail"
-  ).innerHTML = `
-
-    <h2>
-      ${vehicle.icon}
-      ${escapeHtml(vehicle.name)}
-    </h2>
-
-    <p>
-      <b>Typ:</b>
-      ${escapeHtml(vehicle.type)}
-    </p>
-
-    <p>
-      <b>Status:</b>
-      ${statusText(vehicle.status)}
-    </p>
-
-    <h3>
-      Besatzung
-    </h3>
-
-    ${crewHtml}
-
-    <button
-      class="wide-button"
-      onclick="moveSelectedVehicle('${vehicleId}')"
-    >
-      📍 Fahrzeug bewegen
-    </button>
-
-  `;
-
-
-  document.getElementById(
-    "vehicleDetailDialog"
-  ).style.display =
-    "flex";
-
-};
-
-
-/* =====================================================
-   FAHRZEUG BEWEGEN
-===================================================== */
-
-window.moveSelectedVehicle =
-function (
-  vehicleId
-) {
-
-  if (!map)
-    return;
-
-
-  alert(
-    "Klicke jetzt auf die Karte, um das Fahrzeug dort zu bewegen."
-  );
-
-
-  map.once(
-    "click",
-    async event => {
-
-      await update(
-        ref(
-          realtime,
-          `servers/${currentServer.id}/vehicles/${vehicleId}`
-        ),
+    microphoneStream =
+      await navigator.mediaDevices.getUserMedia(
         {
-
-          lat:
-            event.latlng.lat,
-
-          lng:
-            event.latlng.lng
-
+          audio: true
         }
       );
 
-    }
-  );
 
-};
+    $("radioTransmit")
+      .classList.add("active");
 
-
-/* =====================================================
-   EINSATZ ERSTELLEN
-===================================================== */
-
-window.createIncident =
-async function () {
-
-  const street =
-    document.getElementById(
-      "incidentStreet"
-    ).value.trim();
+    $("micStatus").textContent =
+      "MIKROFON AKTIV";
 
 
-  const city =
-    document.getElementById(
-      "incidentCity"
-    ).value.trim();
+    await sendRadioMessage(
+      "🎙️ " +
+      (
+        currentUser.displayName ||
+        "Funkteilnehmer"
+      ) +
+      " spricht"
+    );
 
+  } catch (error) {
 
-  const keyword =
-    document.getElementById(
-      "incidentKeyword"
-    ).value;
-
-
-  const description =
-    document.getElementById(
-      "incidentDescription"
-    ).value.trim();
-
-
-  const notes =
-    document.getElementById(
-      "incidentNotes"
-    ).value.trim();
-
-
-  if (!street) {
+    console.error(error);
 
     alert(
-      "Bitte eine Straße eingeben."
+      "Der Mikrofonzugriff wurde nicht erlaubt."
     );
-
-    return;
 
   }
-
-
-  const resources =
-    Array.from(
-      document.querySelectorAll(
-        ".resource:checked"
-      )
-    ).map(
-      checkbox =>
-        checkbox.value
-    );
-
-
-  /*
-   * Für die Demo wird die Einsatzstelle
-   * in der Umgebung von Nürnberg erzeugt.
-   */
-
-  const lat =
-    49.4521 +
-    (
-      Math.random() -
-      0.5
-    ) *
-    0.04;
-
-
-  const lng =
-    11.0767 +
-    (
-      Math.random() -
-      0.5
-    ) *
-    0.05;
-
-
-  const incident = {
-
-    keyword:
-      keyword,
-
-    address:
-      `${street}, ${city}`,
-
-    city:
-      city,
-
-    description:
-      description,
-
-    notes:
-      notes,
-
-    resources:
-      resources,
-
-    status:
-      "offen",
-
-    lat:
-      lat,
-
-    lng:
-      lng,
-
-    createdBy:
-      currentUser.uid,
-
-    createdByName:
-      currentUser.displayName ||
-      currentUser.email,
-
-    createdAt:
-      serverTimestamp()
-
-  };
-
-
-  await addDoc(
-    collection(
-      db,
-      "servers",
-      currentServer.id,
-      "incidents"
-    ),
-    incident
-  );
-
-
-  closeModal(
-    "incidentDialog"
-  );
-
-
-  playPager();
-
-
-  document.getElementById(
-    "incidentStreet"
-  ).value = "";
-
-
-  document.getElementById(
-    "incidentDescription"
-  ).value = "";
-
-
-  document.getElementById(
-    "incidentNotes"
-  ).value = "";
-
-};
-
-
-/* =====================================================
-   LIVE EINSÄTZE
-===================================================== */
-
-function listenToIncidents() {
-
-  if (
-    unsubscribeIncidents
-  ) {
-
-    unsubscribeIncidents();
-
-  }
-
-
-  const incidentsRef =
-    collection(
-      db,
-      "servers",
-      currentServer.id,
-      "incidents"
-    );
-
-
-  unsubscribeIncidents =
-    onSnapshot(
-      incidentsRef,
-      snapshot => {
-
-        incidents = {};
-
-
-        snapshot.forEach(
-          item => {
-
-            incidents[item.id] = {
-
-              id:
-                item.id,
-
-              ...item.data()
-
-            };
-
-          }
-        );
-
-
-        renderIncidents();
-
-      },
-      error => {
-
-        console.error(
-          "Incident listener:",
-          error
-        );
-
-      }
-    );
 
 }
 
 
-/* =====================================================
-   EINSÄTZE RENDERN
-===================================================== */
+function stopMicrophone() {
 
-function renderIncidents() {
+  if (microphoneStream) {
 
-  const list =
-    document.getElementById(
-      "incidentList"
-    );
+    microphoneStream
+      .getTracks()
+      .forEach(track => track.stop());
 
-
-  list.innerHTML = "";
-
-
-  const values =
-    Object.values(
-      incidents
-    );
-
-
-  if (!values.length) {
-
-    list.innerHTML =
-      `<div class="small">
-        Keine Einsätze.
-      </div>`;
-
-    return;
+    microphoneStream = null;
 
   }
 
 
-  values.forEach(
-    incident => {
+  $("radioTransmit")
+    .classList.remove("active");
 
-      const card =
-        document.createElement(
-          "div"
-        );
+  $("micStatus").textContent =
+    "Nicht verbunden";
 
-
-      card.className =
-        "incident-card";
+}
 
 
-      card.innerHTML = `
+/* =========================================================
+   PLAYERS
+   ========================================================= */
 
-        <b>
-          🚨 ${escapeHtml(
-            incident.keyword
-          )}
-        </b>
+function subscribePlayers() {
 
-        <div class="small">
-          📍 ${escapeHtml(
-            incident.address
-          )}
+  const membersRef =
+    collection(
+      db,
+      "servers",
+      currentServerId,
+      "members"
+    );
+
+
+  const unsubscribe =
+    onSnapshot(
+      membersRef,
+      snapshot => {
+
+        players =
+          snapshot.docs.map(
+            d => ({
+              id: d.id,
+              ...d.data()
+            })
+          );
+
+
+        renderPlayers();
+
+        updateStats();
+
+      }
+    );
+
+
+  unsubscribeFunctions.push(unsubscribe);
+
+}
+
+
+function renderPlayers() {
+
+  $("playersList").innerHTML =
+    players.map(
+      player => `
+
+        <div class="player-card">
+
+          <div class="player-avatar">
+            ${escapeHtml(
+              player.name?.[0] || "?"
+            )}
+          </div>
+
+          <div>
+
+            <b>
+              ${escapeHtml(
+                player.name || "Spieler"
+              )}
+            </b>
+
+            <small>
+              ${player.role || "Mitspieler"}
+            </small>
+
+          </div>
+
         </div>
 
-        <div class="small">
-          ${escapeHtml(
-            incident.description ||
-            ""
-          )}
+      `
+    ).join("");
+
+}
+
+
+/* =========================================================
+   REPORTS
+   ========================================================= */
+
+function subscribeReports() {
+
+  const refCollection =
+    collection(
+      db,
+      "servers",
+      currentServerId,
+      "reports"
+    );
+
+
+  const q =
+    query(
+      refCollection,
+      orderBy("createdAt", "desc")
+    );
+
+
+  const unsubscribe =
+    onSnapshot(
+      q,
+      snapshot => {
+
+        reports =
+          snapshot.docs.map(
+            d => ({
+              id: d.id,
+              ...d.data()
+            })
+          );
+
+
+        renderReports();
+
+      }
+    );
+
+
+  unsubscribeFunctions.push(unsubscribe);
+
+}
+
+
+function renderReports() {
+
+  $("reportsList").innerHTML =
+    reports.map(
+      report => `
+
+        <div class="report-card">
+
+          <h3>
+            🚨 ${escapeHtml(report.keyword)}
+          </h3>
+
+          <p>
+            <b>Einsatzort:</b>
+            ${escapeHtml(report.address)},
+            ${escapeHtml(report.city)}
+          </p>
+
+          <p>
+            <b>Anrufer:</b>
+            ${escapeHtml(report.caller || "Unbekannt")}
+          </p>
+
+          <p>
+            ${escapeHtml(
+              report.description ||
+              "Keine Beschreibung"
+            )}
+          </p>
+
+          <div class="report-footer">
+
+            Erstellt von:
+            ${escapeHtml(
+              report.createdBy || "Unbekannt"
+            )}
+
+          </div>
+
         </div>
 
-        <div class="vehicle-buttons">
+      `
+    ).join("") ||
+    `<div class="empty">
+      Noch keine Einsatzberichte
+    </div>`;
 
-          <button
-            onclick="
-              focusIncident(
-                '${incident.id}'
-              )
-            "
-          >
-            🗺 Karte
-          </button>
+}
 
-          <button
-            onclick="
-              showReport(
-                '${incident.id}'
-              )
-            "
-          >
-            📋 Bericht
-          </button>
 
-        </div>
+/* =========================================================
+   MAP
+   ========================================================= */
+
+function initMap() {
+
+  setTimeout(() => {
+
+    if (!map) {
+
+      map =
+        L.map("map")
+          .setView(
+            [49.45, 11.08],
+            10
+          );
+
+
+      L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+          maxZoom: 19,
+          attribution:
+            "&copy; OpenStreetMap"
+        }
+      ).addTo(map);
+
+    }
+
+
+    map.invalidateSize();
+
+    updateMap();
+
+  }, 100);
+
+}
+
+
+function updateMap() {
+
+  if (!map) return;
+
+
+  /* Fahrzeuge */
+
+  vehicles.forEach(
+    vehicle => {
+
+      if (
+        !vehicle.lat ||
+        !vehicle.lng
+      ) return;
+
+
+      const popup = `
+
+        <b>${escapeHtml(
+          vehicle.name
+        )}</b>
+
+        <br>
+
+        ${escapeHtml(
+          vehicle.type
+        )}
+
+        <br>
+
+        Status:
+        ${vehicle.status}
 
       `;
 
 
-      list.appendChild(
-        card
-      );
+      if (
+        vehicleMarkers[vehicle.id]
+      ) {
 
+        vehicleMarkers[
+          vehicle.id
+        ]
+        .setLatLng([
+          vehicle.lat,
+          vehicle.lng
+        ])
+        .setPopupContent(popup);
 
-      updateIncidentMarker(
-        incident
-      );
+      } else {
+
+        vehicleMarkers[
+          vehicle.id
+        ] =
+          L.marker([
+            vehicle.lat,
+            vehicle.lng
+          ])
+          .addTo(map)
+          .bindPopup(popup);
+
+      }
 
     }
   );
 
-}
 
+  /* Einsätze */
 
-/* =====================================================
-   EINSATZ MARKER
-===================================================== */
-
-function updateIncidentMarker(
-  incident
-) {
-
-  if (!map)
-    return;
-
-
-  const position = [
-
-    Number(
-      incident.lat
-    ),
-
-    Number(
-      incident.lng
+  operations
+    .filter(
+      op =>
+        op.status !== "closed"
     )
+    .forEach(
+      operation => {
 
-  ];
+        const popup = `
 
+          <b>🚨 ${
+            escapeHtml(
+              operation.keyword
+            )
+          }</b>
 
-  if (
-    incidentMarkers[
-      incident.id
-    ]
-  ) {
+          <br>
 
-    incidentMarkers[
-      incident.id
-    ].setLatLng(
-      position
-    );
+          ${
+            escapeHtml(
+              operation.address
+            )
+          }
 
-    return;
+          <br>
 
-  }
+          ${
+            escapeHtml(
+              operation.city
+            )
+          }
 
+          <br>
 
-  const icon =
-    L.divIcon({
+          Priorität:
+          ${operation.priority}
 
-      html: `
-
-        <div style="
-          width:44px;
-          height:44px;
-          border-radius:50%;
-          background:#ff3b30;
-          border:3px solid white;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          font-size:22px;
-          box-shadow:0 0 20px #f00;
-        ">
-          🚨
-        </div>
-
-      `,
-
-      iconSize:
-        [44,44],
-
-      iconAnchor:
-        [22,22]
-
-    });
+        `;
 
 
-  incidentMarkers[
-    incident.id
-  ] =
-    L.marker(
-      position,
-      {
-        icon
+        if (
+          operationMarkers[
+            operation.id
+          ]
+        ) {
+
+          operationMarkers[
+            operation.id
+          ]
+          .setLatLng([
+            operation.lat,
+            operation.lng
+          ])
+          .setPopupContent(popup);
+
+        } else {
+
+          operationMarkers[
+            operation.id
+          ] =
+            L.circleMarker(
+              [
+                operation.lat,
+                operation.lng
+              ],
+              {
+                radius: 10,
+                color: "#ff3347",
+                fillColor: "#ff3347",
+                fillOpacity: .8
+              }
+            )
+            .addTo(map)
+            .bindPopup(popup);
+
+        }
+
       }
-    )
-    .addTo(map)
-    .bindPopup(
-      `<b>
-        🚨 ${escapeHtml(
-          incident.keyword
-        )}
-       </b>
-       <br>
-       ${escapeHtml(
-         incident.address
-       )}`
     );
 
 }
 
 
-/* =====================================================
-   EINSATZ FOKUS
-===================================================== */
+/* =========================================================
+   PRESENCE
+   ========================================================= */
 
-window.focusIncident =
-function (
-  incidentId
-) {
+async function createPresence() {
 
-  const incident =
-    incidents[
-      incidentId
-    ];
+  if (!currentUser) return;
 
-
-  if (!incident)
-    return;
-
-
-  map.setView(
-    [
-      incident.lat,
-      incident.lng
-    ],
-    16
-  );
-
-
-  if (
-    incidentMarkers[
-      incidentId
-    ]
-  ) {
-
-    incidentMarkers[
-      incidentId
-    ].openPopup();
-
-  }
-
-};
-
-
-/* =====================================================
-   EINSATZBERICHT
-===================================================== */
-
-window.showReport =
-function (
-  incidentId
-) {
-
-  const incident =
-    incidents[
-      incidentId
-    ];
-
-
-  if (!incident)
-    return;
-
-
-  document.getElementById(
-    "reportContent"
-  ).innerHTML = `
-
-    <div class="report">
-
-      <h1>
-        Einsatzbericht
-      </h1>
-
-      <div class="report-row">
-
-        <b>
-          Einsatznummer
-        </b>
-
-        <span>
-          ${incidentId}
-        </span>
-
-      </div>
-
-
-      <div class="report-row">
-
-        <b>
-          Einsatzstichwort
-        </b>
-
-        <span>
-          ${escapeHtml(
-            incident.keyword
-          )}
-        </span>
-
-      </div>
-
-
-      <div class="report-row">
-
-        <b>
-          Einsatzort
-        </b>
-
-        <span>
-          ${escapeHtml(
-            incident.address
-          )}
-        </span>
-
-      </div>
-
-
-      <div class="report-row">
-
-        <b>
-          Beschreibung
-        </b>
-
-        <span>
-          ${escapeHtml(
-            incident.description ||
-            "-"
-          )}
-        </span>
-
-      </div>
-
-
-      <div class="report-row">
-
-        <b>
-          Hinweise
-        </b>
-
-        <span>
-          ${escapeHtml(
-            incident.notes ||
-            "-"
-          )}
-        </span>
-
-      </div>
-
-
-      <div class="report-row">
-
-        <b>
-          Einsatzmittel
-        </b>
-
-        <span>
-          ${(
-            incident.resources ||
-            []
-          ).join(", ")}
-        </span>
-
-      </div>
-
-
-      <div class="report-row">
-
-        <b>
-          Erstellt von
-        </b>
-
-        <span>
-          ${escapeHtml(
-            incident.createdByName ||
-            "-"
-          )}
-        </span>
-
-      </div>
-
-
-      <div class="report-row">
-
-        <b>
-          Status
-        </b>
-
-        <span>
-          ${escapeHtml(
-            incident.status ||
-            "-"
-          )}
-        </span>
-
-      </div>
-
-    </div>
-
-  `;
-
-
-  document.getElementById(
-    "reportDialog"
-  ).style.display =
-    "flex";
-
-};
-
-
-/* =====================================================
-   SPIELER PRESENCE
-===================================================== */
-
-function startPresence() {
-
-  if (!currentUser)
-    return;
-
-
-  const statusRef =
+  const presenceRef =
     ref(
-      realtime,
-      `users/${currentUser.uid}/online`
+      realtimeDB,
+      `presence/${currentUser.uid}`
     );
 
 
-  set(
-    statusRef,
-    true
-  );
-
-
-  onDisconnect(
-    statusRef
-  ).set(false);
-
-}
-
-
-/* =====================================================
-   LIVE SPIELER
-===================================================== */
-
-function listenToPlayers() {
-
-  if (!currentServer)
-    return;
-
-
-  const playersRef =
-    ref(
-      realtime,
-      `servers/${currentServer.id}/players`
-    );
-
-
-  const myPlayerRef =
-    ref(
-      realtime,
-      `servers/${currentServer.id}/players/${currentUser.uid}`
-    );
-
-
-  set(
-    myPlayerRef,
+  await set(
+    presenceRef,
     {
 
       uid:
@@ -2254,7 +2277,7 @@ function listenToPlayers() {
       online:
         true,
 
-      joinedAt:
+      lastSeen:
         Date.now()
 
     }
@@ -2262,425 +2285,25 @@ function listenToPlayers() {
 
 
   onDisconnect(
-    myPlayerRef
+    presenceRef
   ).remove();
 
 
   onValue(
-    playersRef,
-    snapshot => {
-
-      const players =
-        snapshot.val() || {};
-
-
-      const list =
-        document.getElementById(
-          "playerList"
-        );
-
-
-      list.innerHTML = "";
-
-
-      Object.values(
-        players
-      ).forEach(
-        player => {
-
-          const div =
-            document.createElement(
-              "div"
-            );
-
-
-          div.className =
-            "player-card";
-
-
-          div.innerHTML =
-            `🟢 ${escapeHtml(
-              player.name
-            )}`;
-
-
-          list.appendChild(
-            div
-          );
-
-        }
-      );
-
-    }
-  );
-
-}
-
-
-/* =====================================================
-   MELDER
-===================================================== */
-
-window.testPager =
-function () {
-
-  playPager();
-
-};
-
-
-function playPager() {
-
-  const audio =
-    document.getElementById(
-      "pagerSound"
-    );
-
-
-  document.getElementById(
-    "pagerStatus"
-  ).textContent =
-    "🔴 ALARM";
-
-
-  audio.currentTime = 0;
-
-
-  audio.play()
-    .catch(
-      () => {
-
-        console.log(
-          "Browser wartet auf Benutzerinteraktion."
-        );
-
-      }
-    );
-
-
-  setTimeout(
-    () => {
-
-      document.getElementById(
-        "pagerStatus"
-      ).textContent =
-        "🟢 Einsatzbereit";
-
-    },
-    5000
-  );
-
-}
-
-
-/* =====================================================
-   ALARM QUITTIEREN
-===================================================== */
-
-window.acknowledgeAlarm =
-function () {
-
-  document.getElementById(
-    "alarmOverlay"
-  ).style.display =
-    "none";
-
-};
-
-
-/* =====================================================
-   MIKROFON
-===================================================== */
-
-window.enableMicrophone =
-async function () {
-
-  try {
-
-    microphoneStream =
-      await navigator.mediaDevices
-        .getUserMedia(
-          {
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true
-            }
-          }
-        );
-
-
-    document.getElementById(
-      "micStatus"
-    ).textContent =
-      "🟢 Mikrofon aktiviert";
-
-
-    document.getElementById(
-      "voiceStatus"
-    ).textContent =
-      "🟢 Funk bereit";
-
-
-  }
-  catch (error) {
-
-    console.error(
-      error
-    );
-
-
-    document.getElementById(
-      "micStatus"
-    ).textContent =
-      "🔴 Mikrofonzugriff verweigert";
-
-  }
-
-};
-
-
-/* =====================================================
-   FUNK NACHRICHT
-===================================================== */
-
-window.sendRadioMessage =
-async function () {
-
-  if (!currentServer)
-    return;
-
-
-  const input =
-    document.getElementById(
-      "radioText"
-    );
-
-
-  const text =
-    input.value.trim();
-
-
-  if (!text)
-    return;
-
-
-  const channel =
-    document.getElementById(
-      "radioChannel"
-    ).value;
-
-
-  const messageRef =
-    push(
-      ref(
-        realtime,
-        `servers/${currentServer.id}/radio/${channel}`
-      )
-    );
-
-
-  await set(
-    messageRef,
-    {
-
-      uid:
-        currentUser.uid,
-
-      name:
-        currentUser.displayName ||
-        currentUser.email,
-
-      text:
-        text,
-
-      time:
-        Date.now()
-
-    }
-  );
-
-
-  input.value = "";
-
-};
-
-
-/* =====================================================
-   LIVE FUNK NACHRICHTEN
-===================================================== */
-
-function listenToRadio() {
-
-  if (!currentServer)
-    return;
-
-
-  const channel =
-    document.getElementById(
-      "radioChannel"
-    ).value;
-
-
-  const radioRef =
-    ref(
-      realtime,
-      `servers/${currentServer.id}/radio/${channel}`
-    );
-
-
-  onValue(
-    radioRef,
-    snapshot => {
-
-      const messages =
-        snapshot.val() || {};
-
-
-      const box =
-        document.getElementById(
-          "radioMessages"
-        );
-
-
-      box.innerHTML = "";
-
-
-      Object.values(
-        messages
-      )
-      .sort(
-        (a,b) =>
-          a.time -
-          b.time
-      )
-      .slice(-50)
-      .forEach(
-        message => {
-
-          const div =
-            document.createElement(
-              "div"
-            );
-
-
-          div.className =
-            "radio-message";
-
-
-          div.innerHTML = `
-
-            <b>
-              ${escapeHtml(
-                message.name
-              )}
-            </b>
-
-            <br>
-
-            ${escapeHtml(
-              message.text
-            )}
-
-          `;
-
-
-          box.appendChild(
-            div
-          );
-
-
-          box.scrollTop =
-            box.scrollHeight;
-
-        }
-      );
-
-    }
-  );
-
-}
-
-
-/* =====================================================
-   FUNK KANAL WECHSEL
-===================================================== */
-
-document.addEventListener(
-  "change",
-  event => {
-
-    if (
-      event.target.id ===
-      "radioChannel"
-    ) {
-
-      listenToRadio();
-
-    }
-
-  }
-);
-
-
-/* =====================================================
-   WEBRTC FUNK
-=====================================================
-
-   Dieser Teil stellt die Audio-Grundlage bereit.
-   Die Verbindung zwischen mehreren Spielern wird
-   über Firebase signalisiert.
-
-===================================================== */
-
-function initializeVoiceSystem() {
-
-  if (!currentServer)
-    return;
-
-
-  listenToVoiceSignals();
-
-}
-
-
-/* =====================================================
-   VOICE SIGNALS
-===================================================== */
-
-function listenToVoiceSignals() {
-
-  const signalsRef =
-    ref(
-      realtime,
-      `servers/${currentServer.id}/voiceSignals/${currentUser.uid}`
-    );
-
-
-  onValue(
-    signalsRef,
+    ref(realtimeDB, "presence"),
     snapshot => {
 
       const data =
-        snapshot.val();
+        snapshot.val() || {};
 
+      const count =
+        Object.keys(data).length;
 
-      if (!data)
-        return;
+      $("onlineCount").textContent =
+        `${count} online`;
 
-
-      Object.entries(
-        data
-      ).forEach(
-        async ([signalId, signal]) => {
-
-          await handleVoiceSignal(
-            signalId,
-            signal
-          );
-
-        }
-      );
+      $("statPlayers").textContent =
+        count;
 
     }
   );
@@ -2688,634 +2311,61 @@ function listenToVoiceSignals() {
 }
 
 
-/* =====================================================
-   HANDLE SIGNAL
-===================================================== */
+/* =========================================================
+   SERVER PRESENCE
+   ========================================================= */
 
-async function handleVoiceSignal(
-  signalId,
-  signal
-) {
+function subscribeServerPresence() {
 
-  if (
-    signal.to !==
-    currentUser.uid
-  )
-    return;
-
-
-  try {
-
-    /*
-     * Die eigentliche PeerConnection wird
-     * hier vorbereitet.
-     */
-
-    if (
-      signal.type ===
-      "offer"
-    ) {
-
-      const peer =
-        createPeerConnection(
-          signal.from
-        );
-
-
-      await peer.setRemoteDescription(
-        signal.description
-      );
-
-
-      const answer =
-        await peer.createAnswer();
-
-
-      await peer.setLocalDescription(
-        answer
-      );
-
-
-      await sendVoiceSignal(
-        signal.from,
-        {
-
-          type:
-            "answer",
-
-          description:
-            peer.localDescription,
-
-          from:
-            currentUser.uid,
-
-          to:
-            signal.from
-
-        }
-      );
-
-    }
-
-
-    if (
-      signal.type ===
-      "answer"
-    ) {
-
-      const peer =
-        peerConnections[
-          signal.from
-        ];
-
-
-      if (peer) {
-
-        await peer.setRemoteDescription(
-          signal.description
-        );
-
-      }
-
-    }
-
-
-    if (
-      signal.type ===
-      "candidate"
-    ) {
-
-      const peer =
-        peerConnections[
-          signal.from
-        ];
-
-
-      if (peer) {
-
-        await peer.addIceCandidate(
-          signal.candidate
-        );
-
-      }
-
-    }
-
-  }
-  catch (error) {
-
-    console.error(
-      "Voice signal error:",
-      error
-    );
-
-  }
+  /* Für spätere serverbezogene
+     Online-Spieler-Erweiterungen */
 
 }
 
 
-/* =====================================================
-   PEER CONNECTION
-===================================================== */
+/* =========================================================
+   STATS
+   ========================================================= */
 
-function createPeerConnection(
-  remoteUid
-) {
+function updateStats() {
 
-  if (
-    peerConnections[
-      remoteUid
-    ]
-  ) {
+  $("statVehicles").textContent =
+    vehicles.length;
 
-    return peerConnections[
-      remoteUid
-    ];
+  $("statOperations").textContent =
+    operations.filter(
+      op =>
+        op.status !== "closed"
+    ).length;
 
-  }
-
-
-  const peer =
-    new RTCPeerConnection({
-
-      iceServers: [
-
-        {
-          urls:
-            "stun:stun.l.google.com:19302"
-        },
-
-        {
-          urls:
-            "stun:stun1.l.google.com:19302"
-        }
-
-      ]
-
-    });
-
-
-  peerConnections[
-    remoteUid
-  ] = peer;
-
-
-  if (
-    microphoneStream
-  ) {
-
-    microphoneStream
-      .getTracks()
-      .forEach(
-        track => {
-
-          peer.addTrack(
-            track,
-            microphoneStream
-          );
-
-        }
-      );
-
-  }
-
-
-  peer.onicecandidate =
-    async event => {
-
-      if (
-        event.candidate
-      ) {
-
-        await sendVoiceSignal(
-          remoteUid,
-          {
-
-            type:
-              "candidate",
-
-            candidate:
-              event.candidate,
-
-            from:
-              currentUser.uid,
-
-            to:
-              remoteUid
-
-          }
-        );
-
-      }
-
-    };
-
-
-  peer.ontrack =
-    event => {
-
-      const audio =
-        document.createElement(
-          "audio"
-        );
-
-
-      audio.autoplay = true;
-
-      audio.srcObject =
-        event.streams[0];
-
-      audio.dataset.voiceUser =
-        remoteUid;
-
-      document.body.appendChild(
-        audio
-      );
-
-    };
-
-
-  return peer;
+  $("statAvailable").textContent =
+    vehicles.filter(
+      vehicle =>
+        vehicle.status === "available"
+    ).length;
 
 }
 
 
-/* =====================================================
-   SEND VOICE SIGNAL
-===================================================== */
+/* =========================================================
+   ESCAPE HTML
+   ========================================================= */
 
-async function sendVoiceSignal(
-  targetUid,
-  signal
-) {
+function escapeHtml(value) {
 
-  const signalRef =
-    push(
-      ref(
-        realtime,
-        `servers/${currentServer.id}/voiceSignals/${targetUid}`
-      )
-    );
-
-
-  await set(
-    signalRef,
-    signal
-  );
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 
 }
 
 
-/* =====================================================
-   PUSH TO TALK
-===================================================== */
-
-const pttButton =
-  document.getElementById(
-    "pttButton"
-  );
-
-
-pttButton.addEventListener(
-  "mousedown",
-  startPTT
-);
-
-
-pttButton.addEventListener(
-  "mouseup",
-  stopPTT
-);
-
-
-pttButton.addEventListener(
-  "mouseleave",
-  stopPTT
-);
-
-
-async function startPTT() {
-
-  if (
-    !microphoneStream
-  ) {
-
-    await enableMicrophone();
-
-  }
-
-
-  if (
-    !microphoneStream
-  )
-    return;
-
-
-  microphoneStream
-    .getAudioTracks()
-    .forEach(
-      track => {
-
-        track.enabled =
-          true;
-
-      }
-    );
-
-
-  pttButton.classList.add(
-    "active"
-  );
-
-
-  pttButton.textContent =
-    "🔴 SENDEN...";
-
-
-  document.getElementById(
-    "voiceStatus"
-  ).textContent =
-    "🔴 FUNK SENDEN";
-
-}
-
-
-function stopPTT() {
-
-  if (
-    !microphoneStream
-  )
-    return;
-
-
-  microphoneStream
-    .getAudioTracks()
-    .forEach(
-      track => {
-
-        track.enabled =
-          false;
-
-      }
-    );
-
-
-  pttButton.classList.remove(
-    "active"
-  );
-
-
-  pttButton.textContent =
-    "🎙 PUSH TO TALK";
-
-
-  document.getElementById(
-    "voiceStatus"
-  ).textContent =
-    "🟢 Funk bereit";
-
-}
-
-
-/* =====================================================
-   THEME
-===================================================== */
-
-window.toggleTheme =
-function () {
-
-  document.body.classList.toggle(
-    "light"
-  );
-
-
-  localStorage.setItem(
-    "theme",
-    document.body.classList.contains(
-      "light"
-    )
-      ? "light"
-      : "dark"
-  );
-
-};
-
-
-if (
-  localStorage.getItem(
-    "theme"
-  ) ===
-  "light"
-) {
-
-  document.body.classList.add(
-    "light"
-  );
-
-}
-
-
-/* =====================================================
-   MODAL
-===================================================== */
+/* =========================================================
+   GLOBAL CLOSE MODAL
+   ========================================================= */
 
 window.closeModal =
-function (
-  id
-) {
-
-  document.getElementById(
-    id
-  ).style.display =
-    "none";
-
-};
-
-
-/* =====================================================
-   CONNECTION
-===================================================== */
-
-function updateConnection(
-  connected
-) {
-
-  document.getElementById(
-    "connectionDot"
-  ).textContent =
-    connected
-      ? "🟢"
-      : "🔴";
-
-
-  document.getElementById(
-    "connectionText"
-  ).textContent =
-    connected
-      ? "Verbunden"
-      : "Offline";
-
-}
-
-
-window.addEventListener(
-  "online",
-  () =>
-    updateConnection(
-      true
-    )
-);
-
-
-window.addEventListener(
-  "offline",
-  () =>
-    updateConnection(
-      false
-    )
-);
-
-
-/* =====================================================
-   FIREBASE FEHLER
-===================================================== */
-
-function showAuthMessage(
-  text
-) {
-
-  document.getElementById(
-    "authMessage"
-  ).textContent =
-    text;
-
-}
-
-
-function firebaseError(
-  error
-) {
-
-  const errors = {
-
-    "auth/invalid-credential":
-      "E-Mail oder Passwort falsch.",
-
-    "auth/email-already-in-use":
-      "Diese E-Mail wird bereits verwendet.",
-
-    "auth/invalid-email":
-      "Ungültige E-Mail.",
-
-    "auth/weak-password":
-      "Das Passwort ist zu schwach.",
-
-    "auth/too-many-requests":
-      "Zu viele Versuche. Bitte später erneut versuchen."
-
-  };
-
-
-  return (
-    errors[
-      error.code
-    ] ||
-    `Firebase Fehler: ${error.code}`
-  );
-
-}
-
-
-/* =====================================================
-   HTML SICHERHEIT
-===================================================== */
-
-function escapeHtml(
-  value
-) {
-
-  return String(
-    value ?? ""
-  )
-    .replaceAll(
-      "&",
-      "&amp;"
-    )
-    .replaceAll(
-      "<",
-      "&lt;"
-    )
-    .replaceAll(
-      ">",
-      "&gt;"
-    )
-    .replaceAll(
-      '"',
-      "&quot;"
-    )
-    .replaceAll(
-      "'",
-      "&#039;"
-    );
-
-}
-
-
-/* =====================================================
-   AUTOMATISCHEN SERVER LADEN
-===================================================== */
-
-async function loadSavedServer() {
-
-  const serverId =
-    localStorage.getItem(
-      "currentServer"
-    );
-
-
-  if (!serverId)
-    return;
-
-
-  const snapshot =
-    await getDoc(
-      doc(
-        db,
-        "servers",
-        serverId
-      )
-    );
-
-
-  if (
-    snapshot.exists()
-  ) {
-
-    await enterServer(
-      snapshot.id,
-      snapshot.data()
-    );
-
-  }
-
-}
-
-
-/* =====================================================
-   RADIO START
-===================================================== */
-
-setTimeout(
-  () => {
-
-    if (
-      currentServer
-    ) {
-
-      listenToRadio();
-
-    }
-
-  },
-  2000
-);
+  closeModal;
