@@ -4,6 +4,11 @@ service cloud.firestore {
 
   match /databases/{database}/documents {
 
+
+    /* =================================================
+       USER
+    ================================================= */
+
     match /users/{userId} {
 
       allow read, write:
@@ -13,55 +18,162 @@ service cloud.firestore {
     }
 
 
+    /* =================================================
+       SERVER
+    ================================================= */
+
     match /servers/{serverId} {
+
+
+      /*
+       * Server ansehen:
+       * Nur Mitglieder.
+       */
 
       allow read:
         if request.auth != null
-        && (
-          resource.data.members[request.auth.uid] == true
+        &&
+        (
+          resource.data.ownerId
+            == request.auth.uid
+
           ||
-          resource.data.ownerId == request.auth.uid
+
+          resource.data.members[
+            request.auth.uid
+          ]
+            == true
         );
 
+
+      /*
+       * Server erstellen.
+       */
 
       allow create:
         if request.auth != null
-        && request.resource.data.ownerId
-           == request.auth.uid;
+        &&
+        request.resource.data.ownerId
+          == request.auth.uid;
 
+
+      /*
+       * Server bearbeiten:
+       * Nur Mitglieder oder Besitzer.
+       */
 
       allow update:
         if request.auth != null
-        && (
-          resource.data.members[request.auth.uid] == true
+        &&
+        (
+          resource.data.ownerId
+            == request.auth.uid
+
           ||
-          resource.data.ownerId == request.auth.uid
+
+          resource.data.members[
+            request.auth.uid
+          ]
+            == true
         );
 
 
+      /*
+       * Server löschen:
+       * Nur Besitzer.
+       */
+
       allow delete:
         if request.auth != null
-        && resource.data.ownerId
-           == request.auth.uid;
+        &&
+        resource.data.ownerId
+          == request.auth.uid;
 
+
+      /* ===============================================
+         SERVER MITGLIEDER
+      =============================================== */
+
+      match /members/{userId} {
+
+        allow read:
+          if request.auth != null
+          &&
+          get(
+            /databases/$(database)
+            /documents/servers/$(serverId)
+          ).data.members[
+            request.auth.uid
+          ]
+            == true;
+
+
+        allow create:
+          if request.auth != null
+          &&
+          get(
+            /databases/$(database)
+            /documents/servers/$(serverId)
+          ).data.members[
+            request.auth.uid
+          ]
+            == true;
+
+
+        allow update:
+          if request.auth != null
+          &&
+          get(
+            /databases/$(database)
+            /documents/servers/$(serverId)
+          ).data.members[
+            request.auth.uid
+          ]
+            == true;
+
+      }
+
+
+      /* ===============================================
+         EINSÄTZE
+      =============================================== */
 
       match /incidents/{incidentId} {
 
-        allow read, create:
+        allow read:
           if request.auth != null
-          && get(
-               /databases/$(database)
-               /documents/servers/$(serverId)
-             ).data.members[request.auth.uid]
-             == true;
+          &&
+          get(
+            /databases/$(database)
+            /documents/servers/$(serverId)
+          ).data.members[
+            request.auth.uid
+          ]
+            == true;
+
+
+        allow create:
+          if request.auth != null
+          &&
+          get(
+            /databases/$(database)
+            /documents/servers/$(serverId)
+          ).data.members[
+            request.auth.uid
+          ]
+            == true;
+
 
         allow update, delete:
           if request.auth != null
-          && get(
-               /databases/$(database)
-               /documents/servers/$(serverId)
-             ).data.members[request.auth.uid]
-             == true;
+          &&
+          get(
+            /databases/$(database)
+            /documents/servers/$(serverId)
+          ).data.members[
+            request.auth.uid
+          ]
+            == true;
 
       }
 
