@@ -5,175 +5,159 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
 
-    /* =================================================
-       USER
-    ================================================= */
+    /* ==========================================
+       USERS
+       ========================================== */
 
     match /users/{userId} {
 
-      allow read, write:
+      allow read:
+        if request.auth != null;
+
+      allow create:
+        if request.auth != null
+        && request.auth.uid == userId;
+
+      allow update:
         if request.auth != null
         && request.auth.uid == userId;
 
     }
 
 
-    /* =================================================
-       SERVER
-    ================================================= */
+    /* ==========================================
+       SERVERS
+       ========================================== */
 
     match /servers/{serverId} {
 
-
-      /*
-       * Server ansehen:
-       * Nur Mitglieder.
-       */
-
       allow read:
-        if request.auth != null
-        &&
-        (
-          resource.data.ownerId
-            == request.auth.uid
-
-          ||
-
-          resource.data.members[
-            request.auth.uid
-          ]
-            == true
-        );
-
-
-      /*
-       * Server erstellen.
-       */
+        if request.auth != null;
 
       allow create:
         if request.auth != null
-        &&
-        request.resource.data.ownerId
-          == request.auth.uid;
-
-
-      /*
-       * Server bearbeiten:
-       * Nur Mitglieder oder Besitzer.
-       */
+        && request.resource.data.ownerId
+           == request.auth.uid;
 
       allow update:
-        if request.auth != null
-        &&
-        (
-          resource.data.ownerId
-            == request.auth.uid
-
-          ||
-
-          resource.data.members[
-            request.auth.uid
-          ]
-            == true
-        );
-
-
-      /*
-       * Server löschen:
-       * Nur Besitzer.
-       */
+        if request.auth != null;
 
       allow delete:
         if request.auth != null
-        &&
-        resource.data.ownerId
-          == request.auth.uid;
+        && resource.data.ownerId
+           == request.auth.uid;
 
 
-      /* ===============================================
-         SERVER MITGLIEDER
-      =============================================== */
+      /* ========================================
+         MEMBERS
+         ======================================== */
 
       match /members/{userId} {
 
         allow read:
-          if request.auth != null
-          &&
-          get(
-            /databases/$(database)
-            /documents/servers/$(serverId)
-          ).data.members[
-            request.auth.uid
-          ]
-            == true;
-
+          if request.auth != null;
 
         allow create:
-          if request.auth != null
-          &&
-          get(
-            /databases/$(database)
-            /documents/servers/$(serverId)
-          ).data.members[
-            request.auth.uid
-          ]
-            == true;
-
+          if request.auth != null;
 
         allow update:
+          if request.auth != null;
+
+        allow delete:
           if request.auth != null
-          &&
-          get(
-            /databases/$(database)
-            /documents/servers/$(serverId)
-          ).data.members[
-            request.auth.uid
-          ]
-            == true;
+          && (
+            request.auth.uid == userId
+            ||
+            get(
+              /databases/$(database)/documents/
+              servers/$(serverId)
+            ).data.ownerId
+            == request.auth.uid
+          );
 
       }
 
 
-      /* ===============================================
-         EINSÄTZE
-      =============================================== */
+      /* ========================================
+         VEHICLES
+         ======================================== */
 
-      match /incidents/{incidentId} {
+      match /vehicles/{vehicleId} {
 
         allow read:
-          if request.auth != null
-          &&
-          get(
-            /databases/$(database)
-            /documents/servers/$(serverId)
-          ).data.members[
-            request.auth.uid
-          ]
-            == true;
-
+          if request.auth != null;
 
         allow create:
-          if request.auth != null
-          &&
-          get(
-            /databases/$(database)
-            /documents/servers/$(serverId)
-          ).data.members[
-            request.auth.uid
-          ]
-            == true;
+          if request.auth != null;
+
+        allow update:
+          if request.auth != null;
+
+        allow delete:
+          if request.auth != null;
+
+      }
 
 
-        allow update, delete:
-          if request.auth != null
-          &&
-          get(
-            /databases/$(database)
-            /documents/servers/$(serverId)
-          ).data.members[
-            request.auth.uid
-          ]
-            == true;
+      /* ========================================
+         OPERATIONS
+         ======================================== */
+
+      match /operations/{operationId} {
+
+        allow read:
+          if request.auth != null;
+
+        allow create:
+          if request.auth != null;
+
+        allow update:
+          if request.auth != null;
+
+        allow delete:
+          if request.auth != null;
+
+      }
+
+
+      /* ========================================
+         RADIO
+         ======================================== */
+
+      match /radio/{messageId} {
+
+        allow read:
+          if request.auth != null;
+
+        allow create:
+          if request.auth != null;
+
+        allow update:
+          if request.auth != null;
+
+        allow delete:
+          if request.auth != null;
+
+      }
+
+
+      /* ========================================
+         REPORTS
+         ======================================== */
+
+      match /reports/{reportId} {
+
+        allow read:
+          if request.auth != null;
+
+        allow create:
+          if request.auth != null;
+
+        allow update:
+          if request.auth != null;
+
+        allow delete:
+          if request.auth != null;
 
       }
 
