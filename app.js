@@ -14,8 +14,8 @@ const firebaseConfig = {
   projectId: "ils-leitstellen-rp",
   storageBucket: "ils-leitstellen-rp.firebasestorage.app",
   messagingSenderId: "1052245341584",
-  appId: "1:1052245341584:web:25bbbbc7aeb910eb7e6f15",
-  measurementId: "G-EDG6QHJ1PN"
+  appId: "1:1052245341584:web:db7af84ba00d61497e6f15",
+  measurementId: "G-TMLQ9MB45L"
 };
 
 /* =========================================================
