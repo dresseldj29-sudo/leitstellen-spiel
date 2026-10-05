@@ -1,428 +1,846 @@
-* {
-  box-sizing:border-box;
-}
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-:root {
-  --bg:#071018;
-  --panel:#101b24;
-  --panel2:#172631;
-  --border:#2a3e4c;
-  --text:#f5f7f9;
-  --muted:#91a5b5;
-  --blue:#208cff;
-  --green:#20d66b;
-  --yellow:#ffc107;
-  --red:#ff3b30;
-}
+  <title>ILS Leitstelle RP</title>
 
-body {
-  margin:0;
-  font-family:Arial,Helvetica,sans-serif;
-  background:var(--bg);
-  color:var(--text);
-}
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  >
 
-button,
-input,
-select,
-textarea {
-  font:inherit;
-}
+  <link rel="stylesheet" href="style.css">
+</head>
 
-button {
-  cursor:pointer;
-}
+<body>
 
-#loginScreen {
-  position:fixed;
-  inset:0;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  background:
-    radial-gradient(circle at top,
-    #173d56,
-    #05080b 70%);
-}
+<!-- =====================================================
+     LOGIN
+===================================================== -->
 
-.login-card {
-  width:420px;
-  max-width:92%;
-  background:#101b24;
-  border:1px solid #355064;
-  border-radius:22px;
-  padding:30px;
-  box-shadow:0 30px 100px #000;
-}
+<div id="loginScreen">
 
-.logo {
-  text-align:center;
-  font-size:40px;
-  font-weight:900;
-}
+  <div class="login-card">
 
-.login-subtitle {
-  text-align:center;
-  color:var(--muted);
-  margin:10px 0 25px;
-}
+    <div class="logo">
+      🚨 ILS RP
+    </div>
 
-.tabs {
-  display:flex;
-  gap:5px;
-  margin-bottom:15px;
-}
+    <div class="subtitle">
+      Integrierte Leitstelle Multiplayer
+    </div>
 
-.tab {
-  flex:1;
-  padding:11px;
-  background:#1b2b37;
-  color:white;
-  border:0;
-  border-radius:8px;
-}
+    <div class="login-tabs">
 
-.tab.active {
-  background:var(--blue);
-}
+      <button
+        id="loginTab"
+        class="tab active"
+        onclick="showLogin()"
+      >
+        Anmelden
+      </button>
 
-input,
-select,
-textarea {
-  width:100%;
-  padding:12px;
-  margin:6px 0 12px;
-  background:#09131b;
-  border:1px solid var(--border);
-  border-radius:9px;
-  color:white;
-}
+      <button
+        id="registerTab"
+        class="tab"
+        onclick="showRegister()"
+      >
+        Registrieren
+      </button>
 
-textarea {
-  min-height:90px;
-  resize:vertical;
-}
+    </div>
 
-.primary {
-  width:100%;
-  padding:12px;
-  border:0;
-  border-radius:9px;
-  background:var(--blue);
-  color:white;
-  font-weight:bold;
-}
 
-#authMessage {
-  color:#ff7770;
-  text-align:center;
-  margin-top:12px;
-}
+    <div id="loginForm">
 
-header {
-  height:64px;
-  display:flex;
-  align-items:center;
-  gap:15px;
-  padding:0 15px;
-  background:#0b151e;
-  border-bottom:1px solid var(--border);
-}
+      <input
+        id="loginEmail"
+        type="email"
+        placeholder="E-Mail"
+      >
 
-.brand {
-  font-weight:900;
-  font-size:20px;
-}
+      <input
+        id="loginPassword"
+        type="password"
+        placeholder="Passwort"
+      >
 
-.server-info {
-  color:var(--muted);
-}
+      <button
+        class="main-button"
+        onclick="loginUser()"
+      >
+        ANMELDEN
+      </button>
 
-.server-info b {
-  color:white;
-}
+    </div>
 
-.header-buttons {
-  margin-left:auto;
-  display:flex;
-  gap:7px;
-}
 
-.header-buttons button {
-  background:#243642;
-  color:white;
-  border:0;
-  padding:9px 12px;
-  border-radius:8px;
-}
+    <div
+      id="registerForm"
+      style="display:none"
+    >
 
-.layout {
-  height:calc(100vh - 64px);
-  display:grid;
-  grid-template-columns:300px 1fr 320px;
-}
+      <input
+        id="registerName"
+        type="text"
+        placeholder="Spielername"
+      >
 
-.left-panel,
-.right-panel {
-  overflow:auto;
-  background:var(--panel);
-}
+      <input
+        id="registerEmail"
+        type="email"
+        placeholder="E-Mail"
+      >
 
-.left-panel {
-  border-right:1px solid var(--border);
-}
+      <input
+        id="registerPassword"
+        type="password"
+        placeholder="Passwort"
+      >
 
-.right-panel {
-  border-left:1px solid var(--border);
-}
+      <button
+        class="main-button"
+        onclick="registerUser()"
+      >
+        KONTO ERSTELLEN
+      </button>
 
-section {
-  padding:14px;
-  border-bottom:1px solid var(--border);
-}
+    </div>
 
-section h3 {
-  margin:0 0 10px;
-  font-size:14px;
-}
 
-#map {
-  width:100%;
-  height:100%;
-}
+    <div id="authMessage"></div>
 
-.vehicle-card,
-.incident-card,
-.player-card,
-.radio-message {
-  background:var(--panel2);
-  border:1px solid var(--border);
-  border-radius:10px;
-  padding:10px;
-  margin-bottom:8px;
-}
+  </div>
 
-.vehicle-name {
-  font-weight:bold;
-}
+</div>
 
-.small {
-  color:var(--muted);
-  font-size:12px;
-}
 
-.vehicle-buttons {
-  display:flex;
-  gap:5px;
-  margin-top:8px;
-}
+<!-- =====================================================
+     SPIEL
+===================================================== -->
 
-.vehicle-buttons button {
-  flex:1;
-  padding:7px;
-  background:#263b48;
-  color:white;
-  border:0;
-  border-radius:7px;
-}
+<div
+  id="game"
+  style="display:none"
+>
 
-.status {
-  display:inline-block;
-  padding:4px 7px;
-  border-radius:20px;
-  font-size:11px;
-  margin-top:5px;
-}
 
-.status.ready {
-  background:#103e27;
-  color:var(--green);
-}
+  <!-- HEADER -->
 
-.status.enroute {
-  background:#4b3900;
-  color:var(--yellow);
-}
+  <header class="topbar">
 
-.status.busy {
-  background:#4c1111;
-  color:#ff7770;
-}
+    <div class="brand">
+      🚨 ILS LEITSTELLE
+    </div>
 
-.wide {
-  width:100%;
-  padding:10px;
-  background:#263b48;
-  color:white;
-  border:0;
-  border-radius:8px;
-  margin-top:8px;
-}
 
-.ptt {
-  width:100%;
-  padding:13px;
-  background:var(--blue);
-  color:white;
-  border:0;
-  border-radius:10px;
-  margin-top:10px;
-  font-weight:bold;
-}
+    <div class="connection">
 
-.ptt.active {
-  background:var(--red);
-}
+      <span id="connectionDot">
+        🟢
+      </span>
 
-.modal {
-  position:fixed;
-  inset:0;
-  background:#000b;
-  z-index:5000;
-  display:none;
-  justify-content:center;
-  align-items:center;
-}
+      <span id="connectionText">
+        Verbunden
+      </span>
 
-.modal-card {
-  width:500px;
-  max-width:94%;
-  max-height:90vh;
-  overflow:auto;
-  background:#101b24;
-  border:1px solid #3b5362;
-  border-radius:18px;
-  padding:24px;
-  position:relative;
-}
+    </div>
 
-.modal-card.large {
-  width:760px;
-}
 
-.close {
-  position:absolute;
-  right:15px;
-  top:15px;
-  width:34px;
-  height:34px;
-  border:0;
-  border-radius:50%;
-  background:#293b47;
-  color:white;
-  font-size:20px;
-}
+    <div class="server-info">
 
-.checks {
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  margin-bottom:15px;
-}
+      Server:
 
-.checks label {
-  background:#1a2c38;
-  padding:9px;
-  border-radius:8px;
-}
+      <strong id="serverName">
+        -
+      </strong>
 
-.checks input {
-  width:auto;
-  margin:0;
-}
+      <span id="serverCode">
+        -
+      </span>
 
-.alarm-button {
-  width:100%;
-  padding:14px;
-  background:var(--red);
-  color:white;
-  border:0;
-  border-radius:10px;
-  font-weight:bold;
-  margin-top:10px;
-}
+    </div>
 
-#alarmOverlay {
-  position:fixed;
-  inset:0;
-  z-index:9000;
-  display:none;
-  justify-content:center;
-  align-items:center;
-  background:#220000ed;
-}
 
-.alarm-card {
-  width:650px;
-  max-width:90%;
-  background:#210707;
-  border:3px solid #ff3333;
-  border-radius:22px;
-  padding:35px;
-  text-align:center;
-  box-shadow:0 0 100px #f004;
-}
+    <div class="top-actions">
 
-.alarm-title {
-  font-size:50px;
-  font-weight:900;
-  color:#ff4444;
-  animation:alarmBlink .7s infinite alternate;
-}
+      <button onclick="openServerDialog()">
+        🖥 SERVER
+      </button>
 
-#alarmText {
-  font-size:18px;
-  line-height:1.8;
-  margin:25px 0;
-}
+      <button onclick="openVehicleDialog()">
+        🚒 FAHRZEUG
+      </button>
 
-@keyframes alarmBlink {
-  from {opacity:.4}
-  to {opacity:1}
-}
+      <button onclick="openIncidentDialog()">
+        🚨 EINSATZ
+      </button>
 
-.report {
-  background:white;
-  color:#111;
-  padding:25px;
-}
+      <button onclick="toggleTheme()">
+        🌙
+      </button>
 
-.report h1 {
-  border-bottom:2px solid #222;
-  padding-bottom:10px;
-}
+      <button onclick="logoutUser()">
+        ⏻
+      </button>
 
-.report-row {
-  display:grid;
-  grid-template-columns:180px 1fr;
-  padding:8px 0;
-  border-bottom:1px solid #aaa;
-}
+    </div>
 
-@media(max-width:1100px) {
-  .layout {
-    grid-template-columns:260px 1fr;
-  }
+  </header>
 
-  .right-panel {
-    display:none;
-  }
-}
 
-@media(max-width:700px) {
-  .layout {
-    grid-template-columns:1fr;
-  }
+  <!-- MAIN -->
 
-  .left-panel {
-    display:none;
-  }
+  <div class="main-layout">
 
-  .header-buttons button:not(:first-child) {
-    display:none;
-  }
 
-  .brand {
-    font-size:15px;
-  }
-}
+    <!-- ================================================
+         LEFT
+    ================================================= -->
+
+    <aside class="left-panel">
+
+
+      <section>
+
+        <div class="section-title">
+          🚨 EINSÄTZE
+        </div>
+
+        <div id="incidentList">
+          Keine Einsätze
+        </div>
+
+      </section>
+
+
+      <section>
+
+        <div class="section-title">
+          🚒 FAHRZEUGE
+        </div>
+
+        <div id="vehicleList">
+          Keine Fahrzeuge
+        </div>
+
+      </section>
+
+
+      <section>
+
+        <div class="section-title">
+          👥 SPIELER
+        </div>
+
+        <div id="playerList">
+          -
+        </div>
+
+      </section>
+
+    </aside>
+
+
+    <!-- ================================================
+         MAP
+    ================================================= -->
+
+    <main id="map"></main>
+
+
+    <!-- ================================================
+         RIGHT
+    ================================================= -->
+
+    <aside class="right-panel">
+
+
+      <!-- FUNK -->
+
+      <section>
+
+        <div class="section-title">
+          📻 FUNK
+        </div>
+
+
+        <select id="radioChannel">
+
+          <option value="leitstelle">
+            Kanal 1 – Leitstelle
+          </option>
+
+          <option value="feuerwehr">
+            Kanal 2 – Feuerwehr
+          </option>
+
+          <option value="rettung">
+            Kanal 3 – Rettungsdienst
+          </option>
+
+          <option value="polizei">
+            Kanal 4 – Polizei
+          </option>
+
+        </select>
+
+
+        <div
+          id="radioMessages"
+          class="radio-box"
+        ></div>
+
+
+        <input
+          id="radioText"
+          placeholder="Funknachricht..."
+        >
+
+
+        <button
+          class="wide-button"
+          onclick="sendRadioMessage()"
+        >
+          📻 FUNK SENDEN
+        </button>
+
+
+        <button
+          id="pttButton"
+          class="ptt-button"
+        >
+          🎙 PUSH TO TALK
+        </button>
+
+
+        <div id="voiceStatus">
+          ⚫ Funk nicht verbunden
+        </div>
+
+      </section>
+
+
+      <!-- MELDER -->
+
+      <section>
+
+        <div class="section-title">
+          📟 MELDER
+        </div>
+
+
+        <div
+          id="pagerStatus"
+          class="status ready"
+        >
+          🟢 Einsatzbereit
+        </div>
+
+
+        <button
+          class="wide-button"
+          onclick="testPager()"
+        >
+          📟 PROBEALARM
+        </button>
+
+      </section>
+
+
+      <!-- MIKROFON -->
+
+      <section>
+
+        <div class="section-title">
+          🎙 MIKROFON
+        </div>
+
+
+        <button
+          class="wide-button"
+          onclick="enableMicrophone()"
+        >
+          Mikrofon aktivieren
+        </button>
+
+
+        <div id="micStatus">
+          ⚫ Nicht aktiviert
+        </div>
+
+      </section>
+
+
+      <!-- ACCOUNT -->
+
+      <section>
+
+        <div class="section-title">
+          👤 ACCOUNT
+        </div>
+
+
+        <div id="accountName">
+          -
+        </div>
+
+      </section>
+
+    </aside>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     SERVER DIALOG
+===================================================== -->
+
+<div
+  id="serverDialog"
+  class="modal"
+>
+
+  <div class="modal-card">
+
+    <button
+      class="close"
+      onclick="closeModal('serverDialog')"
+    >
+      ×
+    </button>
+
+
+    <h2>
+      🖥 Server
+    </h2>
+
+
+    <h3>
+      Server erstellen
+    </h3>
+
+
+    <input
+      id="newServerName"
+      placeholder="Servername"
+    >
+
+
+    <button
+      class="main-button"
+      onclick="createServer()"
+    >
+      SERVER ERSTELLEN
+    </button>
+
+
+    <hr>
+
+
+    <h3>
+      Server beitreten
+    </h3>
+
+
+    <input
+      id="joinServerCode"
+      placeholder="Server-Code"
+    >
+
+
+    <button
+      class="main-button"
+      onclick="joinServer()"
+    >
+      BEITRETEN
+    </button>
+
+
+    <hr>
+
+
+    <h3>
+      Meine Server
+    </h3>
+
+
+    <div id="myServers">
+      Laden...
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     VEHICLE DIALOG
+===================================================== -->
+
+<div
+  id="vehicleDialog"
+  class="modal"
+>
+
+  <div class="modal-card">
+
+    <button
+      class="close"
+      onclick="closeModal('vehicleDialog')"
+    >
+      ×
+    </button>
+
+
+    <h2>
+      🚒 Fahrzeug erstellen
+    </h2>
+
+
+    <input
+      id="vehicleName"
+      placeholder="Fahrzeugname, z.B. HLF 20"
+    >
+
+
+    <select id="vehicleType">
+
+      <option value="Feuerwehr">
+        🚒 Feuerwehr
+      </option>
+
+      <option value="Rettungsdienst">
+        🚑 Rettungsdienst
+      </option>
+
+      <option value="Polizei">
+        🚓 Polizei
+      </option>
+
+      <option value="THW">
+        🚧 THW
+      </option>
+
+    </select>
+
+
+    <input
+      id="vehicleMaxCrew"
+      type="number"
+      min="1"
+      max="20"
+      value="9"
+      placeholder="Maximale Besatzung"
+    >
+
+
+    <button
+      class="main-button"
+      onclick="createVehicle()"
+    >
+      FAHRZEUG ERSTELLEN
+    </button>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     EINSATZ DIALOG
+===================================================== -->
+
+<div
+  id="incidentDialog"
+  class="modal"
+>
+
+  <div class="modal-card large">
+
+    <button
+      class="close"
+      onclick="closeModal('incidentDialog')"
+    >
+      ×
+    </button>
+
+
+    <h2>
+      🚨 ILS Einsatzformular
+    </h2>
+
+
+    <label>
+      Einsatzstichwort
+    </label>
+
+    <select id="incidentKeyword">
+
+      <option>
+        B1 – Kleinbrand
+      </option>
+
+      <option>
+        B2 – Mittelbrand
+      </option>
+
+      <option>
+        B3 – Zimmerbrand
+      </option>
+
+      <option>
+        B4 – Gebäudebrand
+      </option>
+
+      <option>
+        THL – Verkehrsunfall
+      </option>
+
+      <option>
+        THL – Person in Gefahr
+      </option>
+
+      <option>
+        ABC – Gefahrstoff
+      </option>
+
+      <option>
+        RD – Medizinischer Notfall
+      </option>
+
+      <option>
+        POL – Verkehrsunfall
+      </option>
+
+    </select>
+
+
+    <label>
+      Straße
+    </label>
+
+    <input
+      id="incidentStreet"
+      placeholder="Musterstraße 12"
+    >
+
+
+    <label>
+      Ort
+    </label>
+
+    <input
+      id="incidentCity"
+      placeholder="Nürnberg"
+      value="Nürnberg"
+    >
+
+
+    <label>
+      Beschreibung
+    </label>
+
+    <textarea
+      id="incidentDescription"
+      placeholder="Was ist passiert?"
+    ></textarea>
+
+
+    <label>
+      Hinweise
+    </label>
+
+    <textarea
+      id="incidentNotes"
+      placeholder="Weitere Informationen"
+    ></textarea>
+
+
+    <label>
+      Einsatzmittel
+    </label>
+
+
+    <div class="checkbox-grid">
+
+      <label>
+        <input
+          type="checkbox"
+          class="resource"
+          value="Feuerwehr"
+          checked
+        >
+        🚒 Feuerwehr
+      </label>
+
+
+      <label>
+        <input
+          type="checkbox"
+          class="resource"
+          value="Rettungsdienst"
+        >
+        🚑 Rettungsdienst
+      </label>
+
+
+      <label>
+        <input
+          type="checkbox"
+          class="resource"
+          value="Polizei"
+        >
+        🚓 Polizei
+      </label>
+
+
+      <label>
+        <input
+          type="checkbox"
+          class="resource"
+          value="THW"
+        >
+        🚧 THW
+      </label>
+
+    </div>
+
+
+    <button
+      class="alarm-button"
+      onclick="createIncident()"
+    >
+      🚨 EINSATZ AUSLÖSEN
+    </button>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     FAHRZEUG DETAILS
+===================================================== -->
+
+<div
+  id="vehicleDetailDialog"
+  class="modal"
+>
+
+  <div class="modal-card">
+
+    <button
+      class="close"
+      onclick="closeModal('vehicleDetailDialog')"
+    >
+      ×
+    </button>
+
+
+    <div id="vehicleDetail">
+      -
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     EINSATZBERICHT
+===================================================== -->
+
+<div
+  id="reportDialog"
+  class="modal"
+>
+
+  <div class="modal-card large">
+
+    <button
+      class="close"
+      onclick="closeModal('reportDialog')"
+    >
+      ×
+    </button>
+
+
+    <div id="reportContent">
+      -
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     ALARM OVERLAY
+===================================================== -->
+
+<div
+  id="alarmOverlay"
+>
+
+  <div class="alarm-card">
+
+    <div class="alarm-title">
+      🚨 EINSATZALARM
+    </div>
+
+
+    <div id="alarmText"></div>
+
+
+    <button
+      class="alarm-button"
+      onclick="acknowledgeAlarm()"
+    >
+      📟 ALARM QUITTIEREN
+    </button>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     AUDIO
+===================================================== -->
+
+<audio
+  id="pagerSound"
+  preload="auto"
+>
+  <source
+    src="assets/melder.mp3"
+    type="audio/mpeg"
+  >
+</audio>
+
+
+<!-- =====================================================
+     LEAFLET
+===================================================== -->
+
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+></script>
+
+
+<!-- =====================================================
+     APP
+===================================================== -->
+
+<script
+  type="module"
+  src="app.js"
+></script>
+
+</body>
+</html>
