@@ -2,9 +2,12 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>ILS COMMAND</title>
 
-  <title>ILS Leitstelle RP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <link
     rel="stylesheet"
@@ -16,174 +19,89 @@
 
 <body>
 
-<!-- =====================================================
-     LOGIN
-===================================================== -->
-
-<div id="loginScreen">
+<!-- LOGIN -->
+<div id="loginScreen" class="screen">
 
   <div class="login-card">
 
-    <div class="logo">
-      🚨 ILS RP
-    </div>
-
-    <div class="subtitle">
-      Integrierte Leitstelle Multiplayer
+    <div class="brand">
+      <div class="brand-icon">ILS</div>
+      <div>
+        <h1>ILS COMMAND</h1>
+        <span>Multiplayer Leitstellenspiel</span>
+      </div>
     </div>
 
     <div class="login-tabs">
-
-      <button
-        id="loginTab"
-        class="tab active"
-        onclick="showLogin()"
-      >
-        Anmelden
-      </button>
-
-      <button
-        id="registerTab"
-        class="tab"
-        onclick="showRegister()"
-      >
-        Registrieren
-      </button>
-
+      <button class="active" id="loginTab">Anmelden</button>
+      <button id="registerTab">Konto erstellen</button>
     </div>
 
+    <form id="authForm">
 
-    <div id="loginForm">
+      <label>E-Mail</label>
+      <input id="email" type="email" placeholder="name@example.de" required>
+
+      <label>Passwort</label>
+      <input id="password" type="password" placeholder="Passwort" required>
 
       <input
-        id="loginEmail"
-        type="email"
-        placeholder="E-Mail"
+        id="displayName"
+        type="text"
+        placeholder="Anzeigename"
+        class="hidden"
       >
 
-      <input
-        id="loginPassword"
-        type="password"
-        placeholder="Passwort"
-      >
-
-      <button
-        class="main-button"
-        onclick="loginUser()"
-      >
+      <button class="primary-button" type="submit" id="authButton">
         ANMELDEN
       </button>
 
-    </div>
+    </form>
 
-
-    <div
-      id="registerForm"
-      style="display:none"
-    >
-
-      <input
-        id="registerName"
-        type="text"
-        placeholder="Spielername"
-      >
-
-      <input
-        id="registerEmail"
-        type="email"
-        placeholder="E-Mail"
-      >
-
-      <input
-        id="registerPassword"
-        type="password"
-        placeholder="Passwort"
-      >
-
-      <button
-        class="main-button"
-        onclick="registerUser()"
-      >
-        KONTO ERSTELLEN
-      </button>
-
-    </div>
-
-
-    <div id="authMessage"></div>
+    <div id="authError" class="error"></div>
 
   </div>
 
 </div>
 
 
-<!-- =====================================================
-     SPIEL
-===================================================== -->
+<!-- APP -->
+<div id="app" class="hidden">
 
-<div
-  id="game"
-  style="display:none"
->
-
-
-  <!-- HEADER -->
-
+  <!-- TOPBAR -->
   <header class="topbar">
 
-    <div class="brand">
-      🚨 ILS LEITSTELLE
+    <div class="top-brand">
+      <div class="mini-logo">ILS</div>
+      <div>
+        <strong>ILS COMMAND</strong>
+        <small id="serverTitle">Kein Server</small>
+      </div>
     </div>
 
+    <div class="server-area">
 
-    <div class="connection">
+      <select id="serverSelect">
+        <option value="">Server auswählen</option>
+      </select>
 
-      <span id="connectionDot">
-        🟢
-      </span>
-
-      <span id="connectionText">
-        Verbunden
-      </span>
-
-    </div>
-
-
-    <div class="server-info">
-
-      Server:
-
-      <strong id="serverName">
-        -
-      </strong>
-
-      <span id="serverCode">
-        -
-      </span>
+      <button id="createServerButton" class="top-button">
+        ＋ Server
+      </button>
 
     </div>
 
+    <div class="top-status">
 
-    <div class="top-actions">
+      <span class="online-dot"></span>
+      <span id="onlineCount">0 online</span>
 
-      <button onclick="openServerDialog()">
-        🖥 SERVER
+      <button id="micButton" class="icon-button">
+        🎙️
       </button>
 
-      <button onclick="openVehicleDialog()">
-        🚒 FAHRZEUG
-      </button>
-
-      <button onclick="openIncidentDialog()">
-        🚨 EINSATZ
-      </button>
-
-      <button onclick="toggleTheme()">
-        🌙
-      </button>
-
-      <button onclick="logoutUser()">
-        ⏻
+      <button id="logoutButton" class="icon-button">
+        ⎋
       </button>
 
     </div>
@@ -192,655 +110,529 @@
 
 
   <!-- MAIN -->
+  <main class="layout">
 
-  <div class="main-layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
 
+      <div class="sidebar-header">
+        <span>LEITSTELLE</span>
+        <b id="clock">00:00:00</b>
+      </div>
 
-    <!-- ================================================
-         LEFT
-    ================================================= -->
+      <button class="nav-button active" data-panel="dashboard">
+        <span>⌂</span>
+        Übersicht
+      </button>
 
-    <aside class="left-panel">
+      <button class="nav-button" data-panel="vehicles">
+        <span>🚒</span>
+        Fahrzeuge
+      </button>
 
+      <button class="nav-button" data-panel="operations">
+        <span>🚨</span>
+        Einsätze
+        <b id="operationBadge">0</b>
+      </button>
 
-      <section>
+      <button class="nav-button" data-panel="radio">
+        <span>📻</span>
+        Funk
+      </button>
 
-        <div class="section-title">
-          🚨 EINSÄTZE
+      <button class="nav-button" data-panel="reports">
+        <span>📋</span>
+        Einsatzberichte
+      </button>
+
+      <button class="nav-button" data-panel="players">
+        <span>👥</span>
+        Spieler
+      </button>
+
+      <div class="sidebar-spacer"></div>
+
+      <div class="connection-card">
+        <span class="online-dot"></span>
+        <div>
+          <b>LIVE SERVER</b>
+          <small id="connectionStatus">Verbunden</small>
         </div>
-
-        <div id="incidentList">
-          Keine Einsätze
-        </div>
-
-      </section>
-
-
-      <section>
-
-        <div class="section-title">
-          🚒 FAHRZEUGE
-        </div>
-
-        <div id="vehicleList">
-          Keine Fahrzeuge
-        </div>
-
-      </section>
-
-
-      <section>
-
-        <div class="section-title">
-          👥 SPIELER
-        </div>
-
-        <div id="playerList">
-          -
-        </div>
-
-      </section>
+      </div>
 
     </aside>
 
 
-    <!-- ================================================
-         MAP
-    ================================================= -->
+    <!-- CONTENT -->
+    <section class="content">
 
-    <main id="map"></main>
+      <!-- DASHBOARD -->
+      <section id="dashboardPanel" class="panel">
 
+        <div class="page-title">
+          <div>
+            <span class="eyebrow">LEITSTELLENÜBERSICHT</span>
+            <h2>Willkommen, <span id="userName">Leitstellenmitarbeiter</span></h2>
+          </div>
 
-    <!-- ================================================
-         RIGHT
-    ================================================= -->
-
-    <aside class="right-panel">
-
-
-      <!-- FUNK -->
-
-      <section>
-
-        <div class="section-title">
-          📻 FUNK
+          <button id="newOperationButton" class="primary-button">
+            ＋ Neuer Einsatz
+          </button>
         </div>
 
 
-        <select id="radioChannel">
+        <div class="stats">
 
-          <option value="leitstelle">
-            Kanal 1 – Leitstelle
-          </option>
+          <div class="stat-card">
+            <span>AKTIVE EINSÄTZE</span>
+            <strong id="statOperations">0</strong>
+            <small>aktuell im System</small>
+          </div>
 
-          <option value="feuerwehr">
-            Kanal 2 – Feuerwehr
-          </option>
+          <div class="stat-card">
+            <span>FAHRZEUGE</span>
+            <strong id="statVehicles">0</strong>
+            <small>im Server</small>
+          </div>
 
-          <option value="rettung">
-            Kanal 3 – Rettungsdienst
-          </option>
+          <div class="stat-card">
+            <span>VERFÜGBAR</span>
+            <strong id="statAvailable">0</strong>
+            <small>einsatzbereit</small>
+          </div>
 
-          <option value="polizei">
-            Kanal 4 – Polizei
-          </option>
+          <div class="stat-card">
+            <span>SPIELER</span>
+            <strong id="statPlayers">0</strong>
+            <small>online</small>
+          </div>
 
-        </select>
-
-
-        <div
-          id="radioMessages"
-          class="radio-box"
-        ></div>
-
-
-        <input
-          id="radioText"
-          placeholder="Funknachricht..."
-        >
-
-
-        <button
-          class="wide-button"
-          onclick="sendRadioMessage()"
-        >
-          📻 FUNK SENDEN
-        </button>
-
-
-        <button
-          id="pttButton"
-          class="ptt-button"
-        >
-          🎙 PUSH TO TALK
-        </button>
-
-
-        <div id="voiceStatus">
-          ⚫ Funk nicht verbunden
-        </div>
-
-      </section>
-
-
-      <!-- MELDER -->
-
-      <section>
-
-        <div class="section-title">
-          📟 MELDER
         </div>
 
 
-        <div
-          id="pagerStatus"
-          class="status ready"
-        >
-          🟢 Einsatzbereit
-        </div>
+        <div class="dashboard-grid">
+
+          <div class="panel-card map-card">
+
+            <div class="card-title">
+              <div>
+                <b>LIVE-EINSATZKARTE</b>
+                <small>Alle Fahrzeuge und Einsätze</small>
+              </div>
+
+              <span class="live-label">
+                ● LIVE
+              </span>
+            </div>
+
+            <div id="map"></div>
+
+          </div>
 
 
-        <button
-          class="wide-button"
-          onclick="testPager()"
-        >
-          📟 PROBEALARM
-        </button>
+          <div class="panel-card">
 
-      </section>
+            <div class="card-title">
+              <div>
+                <b>AKTUELLE EINSÄTZE</b>
+                <small>Live aktualisiert</small>
+              </div>
+            </div>
 
+            <div id="operationList" class="operation-list">
+              <div class="empty">
+                Keine aktiven Einsätze
+              </div>
+            </div>
 
-      <!-- MIKROFON -->
+          </div>
 
-      <section>
-
-        <div class="section-title">
-          🎙 MIKROFON
-        </div>
-
-
-        <button
-          class="wide-button"
-          onclick="enableMicrophone()"
-        >
-          Mikrofon aktivieren
-        </button>
-
-
-        <div id="micStatus">
-          ⚫ Nicht aktiviert
         </div>
 
       </section>
 
 
-      <!-- ACCOUNT -->
+      <!-- VEHICLES -->
+      <section id="vehiclesPanel" class="panel hidden">
 
-      <section>
+        <div class="page-title">
+          <div>
+            <span class="eyebrow">FUHRPARK</span>
+            <h2>Fahrzeuge</h2>
+          </div>
 
-        <div class="section-title">
-          👤 ACCOUNT
+          <button id="addVehicleButton" class="primary-button">
+            ＋ Fahrzeug
+          </button>
         </div>
 
+        <div id="vehicleGrid" class="vehicle-grid"></div>
 
-        <div id="accountName">
-          -
+      </section>
+
+
+      <!-- OPERATIONS -->
+      <section id="operationsPanel" class="panel hidden">
+
+        <div class="page-title">
+          <div>
+            <span class="eyebrow">EINSATZVERWALTUNG</span>
+            <h2>Einsätze</h2>
+          </div>
+
+          <button id="newOperationButton2" class="primary-button">
+            ＋ Einsatz erstellen
+          </button>
+        </div>
+
+        <div id="allOperations" class="operations-table"></div>
+
+      </section>
+
+
+      <!-- RADIO -->
+      <section id="radioPanel" class="panel hidden">
+
+        <div class="page-title">
+          <div>
+            <span class="eyebrow">FUNK</span>
+            <h2>Funkverkehr</h2>
+          </div>
+        </div>
+
+        <div class="radio-layout">
+
+          <div class="radio-window">
+
+            <div class="radio-header">
+              <span>📻 BOS FUNK</span>
+              <span id="radioChannel">KANAL 1</span>
+            </div>
+
+            <div id="radioMessages" class="radio-messages"></div>
+
+            <form id="radioForm" class="radio-input">
+              <input
+                id="radioText"
+                placeholder="Funknachricht eingeben..."
+                autocomplete="off"
+              >
+              <button>SENDEN</button>
+            </form>
+
+          </div>
+
+
+          <div class="radio-controls">
+
+            <button id="radioTransmit" class="transmit-button">
+              🎙️<br>
+              <strong>SPRECHEN</strong>
+              <small>Push-to-Talk</small>
+            </button>
+
+            <div class="radio-info">
+              <span>MIKROFON</span>
+              <b id="micStatus">Nicht verbunden</b>
+            </div>
+
+          </div>
+
         </div>
 
       </section>
 
-    </aside>
 
-  </div>
+      <!-- REPORTS -->
+      <section id="reportsPanel" class="panel hidden">
+
+        <div class="page-title">
+          <div>
+            <span class="eyebrow">DOKUMENTATION</span>
+            <h2>Einsatzberichte</h2>
+          </div>
+        </div>
+
+        <div id="reportsList" class="reports-list"></div>
+
+      </section>
+
+
+      <!-- PLAYERS -->
+      <section id="playersPanel" class="panel hidden">
+
+        <div class="page-title">
+          <div>
+            <span class="eyebrow">MULTIPLAYER</span>
+            <h2>Spieler</h2>
+          </div>
+        </div>
+
+        <div id="playersList" class="players-grid"></div>
+
+      </section>
+
+    </section>
+
+  </main>
 
 </div>
 
 
-<!-- =====================================================
-     SERVER DIALOG
-===================================================== -->
-
-<div
-  id="serverDialog"
-  class="modal"
->
-
-  <div class="modal-card">
-
-    <button
-      class="close"
-      onclick="closeModal('serverDialog')"
-    >
-      ×
-    </button>
-
-
-    <h2>
-      🖥 Server
-    </h2>
-
-
-    <h3>
-      Server erstellen
-    </h3>
-
-
-    <input
-      id="newServerName"
-      placeholder="Servername"
-    >
-
-
-    <button
-      class="main-button"
-      onclick="createServer()"
-    >
-      SERVER ERSTELLEN
-    </button>
-
-
-    <hr>
-
-
-    <h3>
-      Server beitreten
-    </h3>
-
-
-    <input
-      id="joinServerCode"
-      placeholder="Server-Code"
-    >
-
-
-    <button
-      class="main-button"
-      onclick="joinServer()"
-    >
-      BEITRETEN
-    </button>
-
-
-    <hr>
-
-
-    <h3>
-      Meine Server
-    </h3>
-
-
-    <div id="myServers">
-      Laden...
-    </div>
-
-  </div>
-
-</div>
-
-
-<!-- =====================================================
-     VEHICLE DIALOG
-===================================================== -->
-
-<div
-  id="vehicleDialog"
-  class="modal"
->
-
-  <div class="modal-card">
-
-    <button
-      class="close"
-      onclick="closeModal('vehicleDialog')"
-    >
-      ×
-    </button>
-
-
-    <h2>
-      🚒 Fahrzeug erstellen
-    </h2>
-
-
-    <input
-      id="vehicleName"
-      placeholder="Fahrzeugname, z.B. HLF 20"
-    >
-
-
-    <select id="vehicleType">
-
-      <option value="Feuerwehr">
-        🚒 Feuerwehr
-      </option>
-
-      <option value="Rettungsdienst">
-        🚑 Rettungsdienst
-      </option>
-
-      <option value="Polizei">
-        🚓 Polizei
-      </option>
-
-      <option value="THW">
-        🚧 THW
-      </option>
-
-    </select>
-
-
-    <input
-      id="vehicleMaxCrew"
-      type="number"
-      min="1"
-      max="20"
-      value="9"
-      placeholder="Maximale Besatzung"
-    >
-
-
-    <button
-      class="main-button"
-      onclick="createVehicle()"
-    >
-      FAHRZEUG ERSTELLEN
-    </button>
-
-  </div>
-
-</div>
-
-
-<!-- =====================================================
-     EINSATZ DIALOG
-===================================================== -->
-
-<div
-  id="incidentDialog"
-  class="modal"
->
+<!-- NEW OPERATION MODAL -->
+<div id="operationModal" class="modal hidden">
 
   <div class="modal-card large">
 
-    <button
-      class="close"
-      onclick="closeModal('incidentDialog')"
-    >
-      ×
-    </button>
+    <div class="modal-header">
+      <div>
+        <span class="eyebrow">DISPOSITION</span>
+        <h2>Neuen Einsatz anlegen</h2>
+      </div>
 
-
-    <h2>
-      🚨 ILS Einsatzformular
-    </h2>
-
-
-    <label>
-      Einsatzstichwort
-    </label>
-
-    <select id="incidentKeyword">
-
-      <option>
-        B1 – Kleinbrand
-      </option>
-
-      <option>
-        B2 – Mittelbrand
-      </option>
-
-      <option>
-        B3 – Zimmerbrand
-      </option>
-
-      <option>
-        B4 – Gebäudebrand
-      </option>
-
-      <option>
-        THL – Verkehrsunfall
-      </option>
-
-      <option>
-        THL – Person in Gefahr
-      </option>
-
-      <option>
-        ABC – Gefahrstoff
-      </option>
-
-      <option>
-        RD – Medizinischer Notfall
-      </option>
-
-      <option>
-        POL – Verkehrsunfall
-      </option>
-
-    </select>
-
-
-    <label>
-      Straße
-    </label>
-
-    <input
-      id="incidentStreet"
-      placeholder="Musterstraße 12"
-    >
-
-
-    <label>
-      Ort
-    </label>
-
-    <input
-      id="incidentCity"
-      placeholder="Nürnberg"
-      value="Nürnberg"
-    >
-
-
-    <label>
-      Beschreibung
-    </label>
-
-    <textarea
-      id="incidentDescription"
-      placeholder="Was ist passiert?"
-    ></textarea>
-
-
-    <label>
-      Hinweise
-    </label>
-
-    <textarea
-      id="incidentNotes"
-      placeholder="Weitere Informationen"
-    ></textarea>
-
-
-    <label>
-      Einsatzmittel
-    </label>
-
-
-    <div class="checkbox-grid">
-
-      <label>
-        <input
-          type="checkbox"
-          class="resource"
-          value="Feuerwehr"
-          checked
-        >
-        🚒 Feuerwehr
-      </label>
-
-
-      <label>
-        <input
-          type="checkbox"
-          class="resource"
-          value="Rettungsdienst"
-        >
-        🚑 Rettungsdienst
-      </label>
-
-
-      <label>
-        <input
-          type="checkbox"
-          class="resource"
-          value="Polizei"
-        >
-        🚓 Polizei
-      </label>
-
-
-      <label>
-        <input
-          type="checkbox"
-          class="resource"
-          value="THW"
-        >
-        🚧 THW
-      </label>
-
+      <button class="close-modal" data-close="operationModal">×</button>
     </div>
 
+    <form id="operationForm">
 
-    <button
-      class="alarm-button"
-      onclick="createIncident()"
-    >
-      🚨 EINSATZ AUSLÖSEN
-    </button>
+      <div class="form-grid">
+
+        <div>
+          <label>Einsatzstichwort</label>
+          <select id="operationKeyword">
+            <option>Brand Gebäude</option>
+            <option>Brand Keller</option>
+            <option>Brand Fahrzeug</option>
+            <option>Verkehrsunfall</option>
+            <option>Person eingeklemmt</option>
+            <option>Technische Hilfeleistung</option>
+            <option>Unwetter</option>
+            <option>Ölspur</option>
+            <option>Medizinischer Notfall</option>
+            <option>Sonstiger Einsatz</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Ort / Adresse</label>
+          <input id="operationAddress" required placeholder="z. B. Hauptstraße 10">
+        </div>
+
+        <div>
+          <label>Ort</label>
+          <input id="operationCity" required placeholder="z. B. Nürnberg">
+        </div>
+
+        <div>
+          <label>Priorität</label>
+          <select id="operationPriority">
+            <option value="1">Normal</option>
+            <option value="2">Dringend</option>
+            <option value="3">Hoch</option>
+            <option value="4">Notfall</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Anrufer</label>
+          <input id="callerName" placeholder="Name des Anrufers">
+        </div>
+
+        <div>
+          <label>Rückrufnummer</label>
+          <input id="callerPhone" placeholder="Telefonnummer">
+        </div>
+
+      </div>
+
+
+      <label>Beschreibung / Notrufgespräch</label>
+
+      <textarea
+        id="operationDescription"
+        rows="5"
+        placeholder="Was ist passiert? Wo? Wie viele Personen?"
+      ></textarea>
+
+
+      <div class="ai-call">
+
+        <div>
+          <b>KI-Notrufgenerator</b>
+          <small>
+            Erstellt einen realistischen Übungs-Notruf aus den Einsatzdaten.
+          </small>
+        </div>
+
+        <button type="button" id="generateCall">
+          ✨ KI-Anruf generieren
+        </button>
+
+      </div>
+
+
+      <div id="generatedCall" class="generated-call hidden"></div>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="secondary-button"
+          data-close="operationModal"
+        >
+          Abbrechen
+        </button>
+
+        <button type="submit" class="primary-button">
+          🚨 Einsatz eröffnen
+        </button>
+
+      </div>
+
+    </form>
 
   </div>
 
 </div>
 
 
-<!-- =====================================================
-     FAHRZEUG DETAILS
-===================================================== -->
-
-<div
-  id="vehicleDetailDialog"
-  class="modal"
->
+<!-- SERVER MODAL -->
+<div id="serverModal" class="modal hidden">
 
   <div class="modal-card">
 
-    <button
-      class="close"
-      onclick="closeModal('vehicleDetailDialog')"
-    >
-      ×
-    </button>
+    <div class="modal-header">
+      <div>
+        <span class="eyebrow">MULTIPLAYER</span>
+        <h2>Server erstellen</h2>
+      </div>
 
-
-    <div id="vehicleDetail">
-      -
+      <button class="close-modal" data-close="serverModal">×</button>
     </div>
+
+    <form id="serverForm">
+
+      <label>Servername</label>
+      <input id="serverName" required placeholder="z. B. ILS Nürnberg">
+
+      <label>Serverbeschreibung</label>
+      <textarea
+        id="serverDescription"
+        placeholder="Beschreibung des Servers..."
+      ></textarea>
+
+      <label>Server-Code</label>
+      <input
+        id="serverCode"
+        maxlength="12"
+        placeholder="z. B. NBG2026"
+      >
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="secondary-button"
+          data-close="serverModal"
+        >
+          Abbrechen
+        </button>
+
+        <button class="primary-button" type="submit">
+          Server erstellen
+        </button>
+
+      </div>
+
+    </form>
 
   </div>
 
 </div>
 
 
-<!-- =====================================================
-     EINSATZBERICHT
-===================================================== -->
+<!-- VEHICLE MODAL -->
+<div id="vehicleModal" class="modal hidden">
 
-<div
-  id="reportDialog"
-  class="modal"
->
+  <div class="modal-card">
 
-  <div class="modal-card large">
+    <div class="modal-header">
+      <div>
+        <span class="eyebrow">FUHRPARK</span>
+        <h2>Fahrzeug hinzufügen</h2>
+      </div>
 
-    <button
-      class="close"
-      onclick="closeModal('reportDialog')"
-    >
-      ×
-    </button>
-
-
-    <div id="reportContent">
-      -
+      <button class="close-modal" data-close="vehicleModal">×</button>
     </div>
+
+    <form id="vehicleForm">
+
+      <label>Funkrufname</label>
+      <input id="vehicleName" required placeholder="z. B. Florian Nürnberg 1/40/1">
+
+      <label>Fahrzeugtyp</label>
+
+      <select id="vehicleType">
+
+        <option value="HLF 20">HLF 20</option>
+        <option value="LF 20">LF 20</option>
+        <option value="LF 10">LF 10</option>
+        <option value="TLF 3000">TLF 3000</option>
+        <option value="DLK 23/12">DLK 23/12</option>
+        <option value="ELW 1">ELW 1</option>
+        <option value="RW">RW</option>
+        <option value="GW-L">GW-L</option>
+        <option value="MZF">MZF</option>
+        <option value="RTW">RTW</option>
+        <option value="NEF">NEF</option>
+        <option value="KTW">KTW</option>
+        <option value="POLIZEI">Polizei</option>
+        <option value="SONSTIGES">Sonstiges</option>
+
+      </select>
+
+      <label>Besatzungsplätze</label>
+      <input id="vehicleSeats" type="number" value="9" min="1" max="20">
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          class="secondary-button"
+          data-close="vehicleModal"
+        >
+          Abbrechen
+        </button>
+
+        <button class="primary-button">
+          Fahrzeug hinzufügen
+        </button>
+
+      </div>
+
+    </form>
 
   </div>
 
 </div>
 
 
-<!-- =====================================================
-     ALARM OVERLAY
-===================================================== -->
+<!-- VEHICLE DETAIL -->
+<div id="vehicleDetailModal" class="modal hidden">
 
-<div
-  id="alarmOverlay"
->
+  <div class="modal-card">
 
-  <div class="alarm-card">
-
-    <div class="alarm-title">
-      🚨 EINSATZALARM
-    </div>
-
-
-    <div id="alarmText"></div>
-
-
-    <button
-      class="alarm-button"
-      onclick="acknowledgeAlarm()"
-    >
-      📟 ALARM QUITTIEREN
-    </button>
+    <div id="vehicleDetail"></div>
 
   </div>
 
 </div>
 
 
-<!-- =====================================================
-     AUDIO
-===================================================== -->
-
-<audio
-  id="pagerSound"
-  preload="auto"
->
-  <source
-    src="assets/melder.mp3"
-    type="audio/mpeg"
-  >
-</audio>
-
-
-<!-- =====================================================
-     LEAFLET
-===================================================== -->
-
-<script
-  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-></script>
-
-
-<!-- =====================================================
-     APP
-===================================================== -->
-
-<script
-  type="module"
-  src="app.js"
-></script>
+<!-- FIREBASE -->
+<script type="module" src="app.js"></script>
 
 </body>
 </html>
