@@ -1,28 +1,791 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>LEITSTELLE X — Einsatzleitstellen-Simulator</title>
 
-  <title>LEITSTELLE X</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css">
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
 
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  >
+<style>
+:root{
+  --bg:#070a0f;
+  --panel:#0d121a;
+  --panel2:#111824;
+  --panel3:#161f2c;
+  --border:#263244;
+  --text:#f5f7fa;
+  --muted:#8995a7;
+  --red:#e53935;
+  --red2:#ff5252;
+  --blue:#2979ff;
+  --green:#00c853;
+  --yellow:#ffc107;
+  --orange:#ff6d00;
+  --shadow:0 20px 60px rgba(0,0,0,.35);
+}
+
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+}
+
+body{
+  font-family:Inter,Arial,sans-serif;
+  background:
+    radial-gradient(circle at 15% 0%,rgba(229,57,53,.12),transparent 30%),
+    radial-gradient(circle at 90% 20%,rgba(41,121,255,.10),transparent 30%),
+    var(--bg);
+  color:var(--text);
+  min-height:100vh;
+}
+
+button,input,select,textarea{
+  font:inherit;
+}
+
+button{
+  cursor:pointer;
+}
+
+.hidden{
+  display:none!important;
+}
+
+/* AUTH */
+
+#authScreen{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+}
+
+.auth-card{
+  width:min(460px,100%);
+  background:rgba(13,18,26,.92);
+  border:1px solid var(--border);
+  border-radius:28px;
+  padding:34px;
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(20px);
+}
+
+.logo{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin-bottom:30px;
+}
+
+.logo-icon{
+  width:54px;
+  height:54px;
+  border-radius:17px;
+  display:grid;
+  place-items:center;
+  background:linear-gradient(135deg,#e53935,#8e1515);
+  box-shadow:0 10px 30px rgba(229,57,53,.25);
+  font-size:25px;
+}
+
+.logo h1{
+  font-size:21px;
+  font-weight:900;
+  letter-spacing:.5px;
+}
+
+.logo span{
+  display:block;
+  color:var(--muted);
+  font-size:11px;
+  margin-top:3px;
+}
+
+.auth-tabs{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  background:#080c12;
+  padding:4px;
+  border-radius:13px;
+  margin-bottom:22px;
+}
+
+.auth-tabs button{
+  border:0;
+  background:transparent;
+  color:var(--muted);
+  padding:12px;
+  border-radius:9px;
+}
+
+.auth-tabs button.active{
+  background:var(--panel3);
+  color:white;
+}
+
+.field{
+  margin-bottom:15px;
+}
+
+.field label{
+  display:block;
+  color:var(--muted);
+  font-size:12px;
+  margin-bottom:7px;
+}
+
+.field input,
+.field select,
+.field textarea{
+  width:100%;
+  border:1px solid var(--border);
+  background:#080d14;
+  color:white;
+  border-radius:12px;
+  padding:13px 14px;
+  outline:none;
+}
+
+.field textarea{
+  min-height:100px;
+  resize:vertical;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus{
+  border-color:var(--blue);
+}
+
+.primary{
+  width:100%;
+  border:0;
+  border-radius:12px;
+  padding:14px;
+  background:linear-gradient(135deg,var(--red),#a51d1d);
+  color:white;
+  font-weight:800;
+  box-shadow:0 10px 30px rgba(229,57,53,.2);
+}
+
+.secondary{
+  border:1px solid var(--border);
+  background:var(--panel2);
+  color:white;
+  border-radius:10px;
+  padding:10px 13px;
+}
+
+.error{
+  background:rgba(229,57,53,.12);
+  border:1px solid rgba(229,57,53,.3);
+  color:#ff8585;
+  padding:11px;
+  border-radius:10px;
+  font-size:12px;
+  margin-bottom:14px;
+}
+
+/* APP */
+
+#app{
+  min-height:100vh;
+}
+
+.topbar{
+  height:70px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 22px;
+  background:rgba(7,10,15,.88);
+  border-bottom:1px solid var(--border);
+  position:sticky;
+  top:0;
+  z-index:1000;
+  backdrop-filter:blur(18px);
+}
+
+.top-left,
+.top-right{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.mini-logo{
+  width:40px;
+  height:40px;
+  border-radius:12px;
+  display:grid;
+  place-items:center;
+  background:linear-gradient(135deg,var(--red),#971c1c);
+}
+
+.server-pill{
+  background:var(--panel2);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:8px 12px;
+  font-size:12px;
+}
+
+.online{
+  color:#00e676;
+}
+
+.layout{
+  display:grid;
+  grid-template-columns:250px minmax(0,1fr);
+  min-height:calc(100vh - 70px);
+}
+
+.sidebar{
+  background:#090d13;
+  border-right:1px solid var(--border);
+  padding:18px 12px;
+}
+
+.nav-section{
+  color:#566173;
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:1.4px;
+  margin:15px 10px 7px;
+}
+
+.nav-btn{
+  width:100%;
+  text-align:left;
+  border:0;
+  color:#aeb8c8;
+  background:transparent;
+  padding:12px;
+  border-radius:10px;
+  margin-bottom:3px;
+}
+
+.nav-btn:hover,
+.nav-btn.active{
+  background:var(--panel3);
+  color:white;
+}
+
+.nav-btn.active{
+  box-shadow:inset 3px 0 var(--red);
+}
+
+.content{
+  padding:22px;
+  min-width:0;
+}
+
+.page{
+  display:none;
+}
+
+.page.active{
+  display:block;
+}
+
+.page-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+  margin-bottom:20px;
+}
+
+.page-header h2{
+  font-size:25px;
+  font-weight:900;
+}
+
+.page-header p{
+  color:var(--muted);
+  font-size:12px;
+  margin-top:4px;
+}
+
+/* CARDS */
+
+.grid{
+  display:grid;
+  gap:15px;
+}
+
+.grid-2{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+
+.grid-3{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+
+.grid-4{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+}
+
+.card{
+  background:rgba(13,18,26,.9);
+  border:1px solid var(--border);
+  border-radius:17px;
+  padding:17px;
+  box-shadow:0 10px 35px rgba(0,0,0,.12);
+}
+
+.card-title{
+  font-size:13px;
+  font-weight:800;
+  margin-bottom:14px;
+}
+
+.stat{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.stat-value{
+  font-size:28px;
+  font-weight:900;
+}
+
+.stat-label{
+  color:var(--muted);
+  font-size:11px;
+  margin-top:3px;
+}
+
+.stat-icon{
+  width:45px;
+  height:45px;
+  border-radius:13px;
+  display:grid;
+  place-items:center;
+  background:var(--panel3);
+  font-size:19px;
+}
+
+/* TABLES / LISTS */
+
+.list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.list-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:12px;
+  background:#0a1018;
+  border:1px solid #1c2735;
+  border-radius:12px;
+}
+
+.list-main{
+  min-width:0;
+}
+
+.list-title{
+  font-weight:800;
+  font-size:13px;
+}
+
+.list-sub{
+  color:var(--muted);
+  font-size:11px;
+  margin-top:4px;
+}
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:5px 8px;
+  border-radius:7px;
+  font-size:10px;
+  font-weight:800;
+}
+
+.badge.green{
+  background:rgba(0,200,83,.12);
+  color:#00e676;
+}
+
+.badge.red{
+  background:rgba(229,57,53,.13);
+  color:#ff7070;
+}
+
+.badge.yellow{
+  background:rgba(255,193,7,.13);
+  color:#ffd54f;
+}
+
+.badge.blue{
+  background:rgba(41,121,255,.13);
+  color:#66a1ff;
+}
+
+.badge.gray{
+  background:#1b2430;
+  color:#9ba8ba;
+}
+
+/* MAP */
+
+#map{
+  width:100%;
+  height:560px;
+  border-radius:16px;
+  overflow:hidden;
+  border:1px solid var(--border);
+}
+
+.map-card{
+  padding:8px;
+}
+
+/* FORM */
+
+.form-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+}
+
+.form-grid .full{
+  grid-column:1/-1;
+}
+
+.actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.action-btn{
+  border:1px solid var(--border);
+  background:var(--panel3);
+  color:white;
+  border-radius:10px;
+  padding:9px 12px;
+  font-size:11px;
+  font-weight:700;
+}
+
+.action-btn.red{
+  background:rgba(229,57,53,.14);
+  border-color:rgba(229,57,53,.35);
+  color:#ff7777;
+}
+
+.action-btn.green{
+  background:rgba(0,200,83,.12);
+  border-color:rgba(0,200,83,.3);
+  color:#00e676;
+}
+
+.action-btn.blue{
+  background:rgba(41,121,255,.13);
+  border-color:rgba(41,121,255,.3);
+  color:#76a9ff;
+}
+
+/* RADIO */
+
+.radio{
+  display:flex;
+  flex-direction:column;
+  height:560px;
+}
+
+.radio-messages{
+  flex:1;
+  overflow:auto;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding:10px;
+  background:#070b10;
+  border-radius:13px;
+  border:1px solid var(--border);
+}
+
+.radio-message{
+  max-width:85%;
+  padding:10px;
+  border-radius:11px;
+  background:#121a25;
+  border:1px solid #202d3d;
+}
+
+.radio-message.mine{
+  align-self:flex-end;
+  background:#321719;
+  border-color:#632326;
+}
+
+.radio-meta{
+  color:#738095;
+  font-size:9px;
+  margin-bottom:4px;
+}
+
+.radio-text{
+  font-size:12px;
+  line-height:1.45;
+}
+
+.radio-compose{
+  display:flex;
+  gap:8px;
+  margin-top:10px;
+}
+
+.radio-compose input{
+  flex:1;
+  border:1px solid var(--border);
+  background:#080d14;
+  color:white;
+  border-radius:11px;
+  padding:12px;
+}
+
+.mic{
+  width:45px;
+  border:0;
+  border-radius:11px;
+  background:#263244;
+  color:white;
+}
+
+.mic.recording{
+  background:var(--red);
+  animation:pulse 1s infinite;
+}
+
+@keyframes pulse{
+  50%{box-shadow:0 0 0 8px rgba(229,57,53,.15)}
+}
+
+/* SERVER */
+
+.server-card{
+  position:relative;
+  overflow:hidden;
+}
+
+.server-card::before{
+  content:"";
+  position:absolute;
+  width:130px;
+  height:130px;
+  background:var(--red);
+  filter:blur(80px);
+  opacity:.09;
+  right:-50px;
+  top:-50px;
+}
+
+.server-actions{
+  display:flex;
+  gap:7px;
+  margin-top:13px;
+}
+
+/* TOAST */
+
+#toastContainer{
+  position:fixed;
+  right:20px;
+  bottom:20px;
+  z-index:5000;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.toast{
+  min-width:260px;
+  max-width:350px;
+  padding:13px 15px;
+  border-radius:12px;
+  background:#111923;
+  border:1px solid var(--border);
+  box-shadow:var(--shadow);
+  font-size:12px;
+}
+
+.toast strong{
+  display:block;
+  margin-bottom:3px;
+}
+
+.toast.success{
+  border-color:rgba(0,200,83,.4);
+}
+
+.toast.error{
+  border-color:rgba(229,57,53,.4);
+}
+
+/* ALARM */
+
+#alarmOverlay{
+  position:fixed;
+  inset:0;
+  z-index:6000;
+  background:rgba(30,0,0,.85);
+  display:none;
+  place-items:center;
+  backdrop-filter:blur(10px);
+}
+
+#alarmOverlay.active{
+  display:grid;
+}
+
+.alarm-box{
+  width:min(600px,90%);
+  text-align:center;
+  background:#0d1118;
+  border:2px solid var(--red);
+  border-radius:24px;
+  padding:35px;
+  box-shadow:0 0 100px rgba(229,57,53,.3);
+  animation:alarmPulse 1s infinite alternate;
+}
+
+@keyframes alarmPulse{
+  from{transform:scale(1)}
+  to{transform:scale(1.015)}
+}
+
+.alarm-icon{
+  font-size:65px;
+  margin-bottom:10px;
+}
+
+.alarm-box h2{
+  font-size:30px;
+  font-weight:900;
+}
+
+.alarm-box p{
+  color:#aab5c4;
+  margin:10px 0 20px;
+}
+
+/* RESPONSIVE */
+
+@media(max-width:1050px){
+  .layout{
+    grid-template-columns:75px minmax(0,1fr);
+  }
+
+  .sidebar{
+    padding:12px 8px;
+  }
+
+  .nav-btn{
+    text-align:center;
+    font-size:0;
+  }
+
+  .nav-btn::first-letter{
+    font-size:18px;
+  }
+
+  .grid-4{
+    grid-template-columns:repeat(2,1fr);
+  }
+}
+
+@media(max-width:760px){
+  .topbar{
+    padding:0 10px;
+  }
+
+  .server-pill{
+    display:none;
+  }
+
+  .layout{
+    display:block;
+  }
+
+  .sidebar{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    height:65px;
+    z-index:2000;
+    display:flex;
+    gap:5px;
+    border-right:0;
+    border-top:1px solid var(--border);
+    overflow:auto;
+  }
+
+  .nav-section{
+    display:none;
+  }
+
+  .nav-btn{
+    min-width:70px;
+    height:48px;
+    margin:auto 0;
+    font-size:10px;
+    text-align:center;
+  }
+
+  .content{
+    padding:13px 13px 85px;
+  }
+
+  .grid-2,
+  .grid-3,
+  .grid-4,
+  .form-grid{
+    grid-template-columns:1fr;
+  }
+
+  .page-header{
+    align-items:flex-start;
+  }
+
+  #map{
+    height:430px;
+  }
+}
+</style>
 </head>
 
 <body>
 
-<div id="authScreen">
+<!-- AUTH -->
+<section id="authScreen">
 
   <div class="auth-card">
 
-    <div class="brand">
-      <div class="brand-icon">🚨</div>
-
+    <div class="logo">
+      <div class="logo-icon">🚨</div>
       <div>
         <h1>LEITSTELLE X</h1>
         <span>Emergency Dispatch Simulator</span>
@@ -30,28 +793,25 @@
     </div>
 
     <div class="auth-tabs">
-      <button id="loginTab" class="active">
-        Anmelden
-      </button>
-
-      <button id="registerTab">
-        Konto erstellen
-      </button>
+      <button id="loginTab" class="active">Anmelden</button>
+      <button id="registerTab">Konto erstellen</button>
     </div>
 
     <div id="authError" class="error hidden"></div>
 
-    <label>E-Mail</label>
-    <input id="authEmail" type="email">
+    <div class="field">
+      <label>E-Mail</label>
+      <input id="authEmail" type="email" placeholder="name@beispiel.de">
+    </div>
 
-    <label>Passwort</label>
-    <input id="authPassword" type="password">
+    <div class="field">
+      <label>Passwort</label>
+      <input id="authPassword" type="password" placeholder="••••••••">
+    </div>
 
-    <div id="nameBox" class="hidden">
-
+    <div id="displayNameField" class="field hidden">
       <label>Anzeigename</label>
-      <input id="displayName">
-
+      <input id="displayName" type="text" placeholder="z.B. Florian Stein">
     </div>
 
     <button id="authButton" class="primary">
@@ -60,35 +820,32 @@
 
   </div>
 
-</div>
+</section>
 
 
-<div id="app" class="hidden">
+<!-- APP -->
+<section id="app" class="hidden">
 
   <header class="topbar">
 
     <div class="top-left">
 
-      <div class="small-logo">
-        🚨
-      </div>
+      <div class="mini-logo">🚨</div>
 
       <div class="server-pill">
         Server:
-        <strong id="currentServerName">
-          Kein Server
-        </strong>
+        <strong id="currentServerName">Keiner</strong>
       </div>
 
-      <span class="live">
+      <div class="badge green">
         ● LIVE
-      </span>
+      </div>
 
     </div>
 
     <div class="top-right">
 
-      <span id="onlineCounter">
+      <span id="onlineCounter" class="online">
         ● 0 online
       </span>
 
@@ -105,39 +862,35 @@
 
     <aside class="sidebar">
 
-      <div class="nav-title">
-        LEITSTELLE
-      </div>
+      <div class="nav-section">Leitstelle</div>
 
-      <button class="nav active" data-page="dashboard">
+      <button class="nav-btn active" data-page="dashboard">
         🏠 Übersicht
       </button>
 
-      <button class="nav" data-page="operations">
+      <button class="nav-btn" data-page="operations">
         🚨 Einsätze
       </button>
 
-      <button class="nav" data-page="vehicles">
+      <button class="nav-btn" data-page="vehicles">
         🚒 Fahrzeuge
       </button>
 
-      <button class="nav" data-page="mapPage">
+      <button class="nav-btn" data-page="mapPage">
         🗺️ Karte
       </button>
 
-      <button class="nav" data-page="radio">
+      <button class="nav-btn" data-page="radio">
         📻 Funk
       </button>
 
-      <div class="nav-title">
-        SYSTEM
-      </div>
+      <div class="nav-section">System</div>
 
-      <button class="nav" data-page="servers">
+      <button class="nav-btn" data-page="servers">
         🖥️ Server
       </button>
 
-      <button class="nav" data-page="profile">
+      <button class="nav-btn" data-page="profile">
         👤 Profil
       </button>
 
@@ -152,116 +905,86 @@
       <section id="dashboard" class="page active">
 
         <div class="page-header">
-
           <div>
             <h2>Leitstellenübersicht</h2>
-            <p>
-              Alle Informationen werden automatisch aktualisiert.
-            </p>
+            <p>Alle wichtigen Informationen in Echtzeit.</p>
           </div>
 
           <div class="actions">
-
-            <button
-              class="button red"
-              onclick="createTrainingCall()"
-            >
+            <button class="action-btn red" onclick="createTrainingCall()">
               📞 Übungsnotruf
             </button>
 
-            <button
-              class="button blue"
-              onclick="requestMicrophone()"
-            >
+            <button class="action-btn blue" onclick="requestMic()">
               🎙 Mikrofon
             </button>
+          </div>
+        </div>
 
+
+        <div class="grid grid-4">
+
+          <div class="card">
+            <div class="stat">
+              <div>
+                <div id="statOperations" class="stat-value">0</div>
+                <div class="stat-label">Aktive Einsätze</div>
+              </div>
+              <div class="stat-icon">🚨</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="stat">
+              <div>
+                <div id="statVehicles" class="stat-value">0</div>
+                <div class="stat-label">Fahrzeuge</div>
+              </div>
+              <div class="stat-icon">🚒</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="stat">
+              <div>
+                <div id="statFreeVehicles" class="stat-value">0</div>
+                <div class="stat-label">Fahrzeuge frei</div>
+              </div>
+              <div class="stat-icon">🟢</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="stat">
+              <div>
+                <div id="statPlayers" class="stat-value">0</div>
+                <div class="stat-label">Spieler online</div>
+              </div>
+              <div class="stat-icon">👥</div>
+            </div>
           </div>
 
         </div>
 
 
-        <div class="stats">
+        <br>
 
-          <div class="stat-card">
+        <div class="grid grid-2">
 
-            <div>
-              <strong id="statOperations">0</strong>
-              <span>Aktive Einsätze</span>
+          <div class="card">
+            <div class="card-title">
+              🚨 Aktuelle Einsätze
             </div>
 
-            <div class="stat-icon">
-              🚨
-            </div>
-
+            <div id="dashboardOperations" class="list"></div>
           </div>
 
-
-          <div class="stat-card">
-
-            <div>
-              <strong id="statVehicles">0</strong>
-              <span>Fahrzeuge</span>
+          <div class="card">
+            <div class="card-title">
+              🚒 Fahrzeugstatus
             </div>
 
-            <div class="stat-icon">
-              🚒
-            </div>
-
-          </div>
-
-
-          <div class="stat-card">
-
-            <div>
-              <strong id="statFreeVehicles">0</strong>
-              <span>Fahrzeuge frei</span>
-            </div>
-
-            <div class="stat-icon">
-              🟢
-            </div>
-
-          </div>
-
-
-          <div class="stat-card">
-
-            <div>
-              <strong id="statPlayers">0</strong>
-              <span>Spieler online</span>
-            </div>
-
-            <div class="stat-icon">
-              👥
-            </div>
-
-          </div>
-
-        </div>
-
-
-        <div class="two-columns">
-
-          <div class="panel">
-
-            <div class="panel-title">
-              Aktuelle Einsätze
-            </div>
-
-            <div id="dashboardOperations"></div>
-
-          </div>
-
-
-          <div class="panel">
-
-            <div class="panel-title">
-              Fahrzeugstatus
-            </div>
-
-            <div id="dashboardVehicles"></div>
-
+            <div id="dashboardVehicles" class="list"></div>
           </div>
 
         </div>
@@ -269,7 +992,7 @@
       </section>
 
 
-      <!-- EINSÄTZE -->
+      <!-- OPERATIONS -->
 
       <section id="operations" class="page">
 
@@ -277,122 +1000,68 @@
 
           <div>
             <h2>Einsätze</h2>
-            <p>
-              Einsätze erstellen und verwalten.
-            </p>
+            <p>Einsätze erstellen, alarmieren und bearbeiten.</p>
           </div>
 
-          <button
-            class="button red"
-            onclick="toggleOperationForm()"
-          >
+          <button class="action-btn red" onclick="openOperationForm()">
             + Einsatz erstellen
           </button>
 
         </div>
 
 
-        <div
-          id="operationForm"
-          class="panel hidden"
-        >
+        <div id="operationForm" class="card hidden">
 
-          <h3>Neuer Einsatz</h3>
+          <div class="card-title">
+            Neuen Einsatz erstellen
+          </div>
 
           <div class="form-grid">
 
-            <div>
+            <div class="field">
               <label>Stichwort</label>
-              <input
-                id="opKeyword"
-                placeholder="Brand Gebäude"
-              >
+              <input id="opKeyword" placeholder="z.B. Brand Gebäude">
             </div>
 
-            <div>
+            <div class="field">
               <label>Priorität</label>
-
               <select id="opPriority">
-
-                <option value="1">
-                  P1 — Normal
-                </option>
-
-                <option value="2">
-                  P2 — Dringend
-                </option>
-
-                <option value="3">
-                  P3 — Notfall
-                </option>
-
+                <option value="1">Priorität 1 — Normal</option>
+                <option value="2">Priorität 2 — Dringend</option>
+                <option value="3">Priorität 3 — Notfall</option>
               </select>
-
             </div>
 
-
-            <div class="full">
+            <div class="field full">
               <label>Adresse</label>
-
-              <input
-                id="opAddress"
-                placeholder="Musterstraße 12, Stein"
-              >
-
+              <input id="opAddress" placeholder="Musterstraße 12, 90547 Stein">
             </div>
 
-
-            <div>
+            <div class="field">
               <label>Anrufer</label>
-
-              <input
-                id="opCaller"
-                placeholder="Max Mustermann"
-              >
-
+              <input id="opCaller" placeholder="Max Mustermann">
             </div>
 
-
-            <div>
+            <div class="field">
               <label>Rückrufnummer</label>
-
-              <input
-                id="opPhone"
-                placeholder="+49 170 1234567"
-              >
-
+              <input id="opPhone" placeholder="+49 170 1234567">
             </div>
 
-
-            <div class="full">
-
-              <label>
-                Einsatzbeschreibung
-              </label>
-
-              <textarea
-                id="opDescription"
-                placeholder="Was wurde gemeldet?"
-              ></textarea>
-
+            <div class="field full">
+              <label>Einsatzbeschreibung</label>
+              <textarea id="opDescription"
+                placeholder="Was wurde gemeldet?"></textarea>
             </div>
 
           </div>
 
-
           <div class="actions">
 
-            <button
-              class="button red"
-              onclick="createOperation()"
-            >
+            <button class="action-btn red" onclick="createOperation()">
               Einsatz anlegen
             </button>
 
-            <button
-              class="button"
-              onclick="toggleOperationForm()"
-            >
+            <button class="action-btn" onclick="closeOperationForm()">
               Abbrechen
             </button>
 
@@ -401,12 +1070,14 @@
         </div>
 
 
-        <div id="operationsList" class="cards"></div>
+        <br>
+
+        <div id="operationsList" class="grid grid-2"></div>
 
       </section>
 
 
-      <!-- FAHRZEUGE -->
+      <!-- VEHICLES -->
 
       <section id="vehicles" class="page">
 
@@ -414,48 +1085,33 @@
 
           <div>
             <h2>Fahrzeuge</h2>
-            <p>
-              Fahrzeuge, Status und Besatzungen.
-            </p>
+            <p>Fahrzeuge und Besatzungen verwalten.</p>
           </div>
 
-          <button
-            class="button red"
-            onclick="toggleVehicleForm()"
-          >
+          <button class="action-btn red" onclick="openVehicleForm()">
             + Fahrzeug erstellen
           </button>
 
         </div>
 
 
-        <div
-          id="vehicleForm"
-          class="panel hidden"
-        >
+        <div id="vehicleForm" class="card hidden">
 
-          <h3>Neues Fahrzeug</h3>
+          <div class="card-title">
+            Neues Fahrzeug
+          </div>
 
           <div class="form-grid">
 
-            <div>
-
+            <div class="field">
               <label>Funkrufname</label>
-
-              <input
-                id="vehicleCallsign"
-                placeholder="Florian Stein 40/1"
-              >
-
+              <input id="vehicleCallsign"
+                placeholder="Florian Stein 40/1">
             </div>
 
-
-            <div>
-
+            <div class="field">
               <label>Fahrzeugtyp</label>
-
               <select id="vehicleType">
-
                 <option>HLF 20</option>
                 <option>LF 20</option>
                 <option>LF 10</option>
@@ -468,42 +1124,29 @@
                 <option>RTW</option>
                 <option>NEF</option>
                 <option>KTW</option>
-
               </select>
-
             </div>
 
-
-            <div>
-
+            <div class="field">
               <label>Besatzungsplätze</label>
-
-              <input
-                id="vehicleSeats"
+              <input id="vehicleSeats"
                 type="number"
                 min="1"
                 max="20"
-                value="9"
-              >
-
+                value="9">
             </div>
 
           </div>
 
-
           <div class="actions">
 
-            <button
-              class="button red"
-              onclick="createVehicle()"
-            >
+            <button class="action-btn red"
+              onclick="createVehicle()">
               Fahrzeug erstellen
             </button>
 
-            <button
-              class="button"
-              onclick="toggleVehicleForm()"
-            >
+            <button class="action-btn"
+              onclick="closeVehicleForm()">
               Abbrechen
             </button>
 
@@ -512,98 +1155,79 @@
         </div>
 
 
-        <div id="vehiclesList" class="cards"></div>
+        <br>
+
+        <div id="vehiclesList" class="grid grid-2"></div>
 
       </section>
 
 
-      <!-- KARTE -->
+      <!-- MAP -->
 
       <section id="mapPage" class="page">
 
         <div class="page-header">
 
           <div>
-
             <h2>Live-Karte</h2>
-
-            <p>
-              Einsatz- und Fahrzeugpositionen.
-            </p>
-
+            <p>Fahrzeuge und Einsätze werden automatisch aktualisiert.</p>
           </div>
 
-          <button
-            class="button blue"
-            onclick="locateUser()"
-          >
-            📍 Standort
+          <button class="action-btn blue" onclick="locateMe()">
+            📍 Mein Standort
           </button>
 
         </div>
 
-
-        <div class="panel map-panel">
-
+        <div class="card map-card">
           <div id="map"></div>
-
         </div>
 
       </section>
 
 
-      <!-- FUNK -->
+      <!-- RADIO -->
 
       <section id="radio" class="page">
 
         <div class="page-header">
 
           <div>
-
             <h2>Digitalfunk</h2>
-
-            <p>
-              Live-Funkkanal.
-            </p>
-
+            <p>Live-Funkkanal des aktuellen Servers.</p>
           </div>
 
-          <button
-            class="button blue"
-            onclick="requestMicrophone()"
-          >
-            🎙 Mikrofon
+          <button id="micButton"
+            class="action-btn blue"
+            onclick="requestMic()">
+            🎙 Mikrofon erlauben
           </button>
 
         </div>
 
 
-        <div class="panel radio">
+        <div class="card radio">
 
-          <div
-            id="radioMessages"
-            class="radio-messages"
-          ></div>
-
+          <div id="radioMessages"
+            class="radio-messages"></div>
 
           <div class="radio-compose">
 
             <input
               id="radioInput"
-              placeholder="Funknachricht..."
-            >
+              placeholder="Funknachricht eingeben..."
+              autocomplete="off">
 
             <button
-              id="recordButton"
-              class="mic-button"
-            >
+              id="micRecordButton"
+              class="mic"
+              title="Mikrofon">
               🎙
             </button>
 
             <button
-              class="button red"
-              onclick="sendRadioMessage()"
-            >
+              class="action-btn red"
+              onclick="sendRadioMessage()">
               Senden
             </button>
 
@@ -614,80 +1238,56 @@
       </section>
 
 
-      <!-- SERVER -->
+      <!-- SERVERS -->
 
       <section id="servers" class="page">
 
         <div class="page-header">
 
           <div>
-
             <h2>Server</h2>
-
-            <p>
-              Eigene Spielserver erstellen.
-            </p>
-
+            <p>Server erstellen und mit anderen Spielern spielen.</p>
           </div>
 
-          <button
-            class="button red"
-            onclick="toggleServerForm()"
-          >
+          <button class="action-btn red"
+            onclick="openServerForm()">
             + Server erstellen
           </button>
 
         </div>
 
 
-        <div
-          id="serverForm"
-          class="panel hidden"
-        >
+        <div id="serverForm" class="card hidden">
 
-          <h3>Neuen Server erstellen</h3>
+          <div class="card-title">
+            Neuen Server erstellen
+          </div>
 
           <div class="form-grid">
 
-            <div>
-
+            <div class="field">
               <label>Servername</label>
-
-              <input
-                id="serverName"
-                placeholder="Feuerwehr Stein"
-              >
-
+              <input id="serverName"
+                placeholder="Feuerwehr Stein">
             </div>
 
-
-            <div>
-
-              <label>Beschreibung</label>
-
-              <input
-                id="serverDescription"
-                placeholder="Mein Leitstellenserver"
-              >
-
+            <div class="field">
+              <label>Serverbeschreibung</label>
+              <input id="serverDescription"
+                placeholder="Öffentlicher Leitstellenserver">
             </div>
 
           </div>
 
-
           <div class="actions">
 
-            <button
-              class="button red"
-              onclick="createServer()"
-            >
+            <button class="action-btn red"
+              onclick="createServer()">
               Server erstellen
             </button>
 
-            <button
-              class="button"
-              onclick="toggleServerForm()"
-            >
+            <button class="action-btn"
+              onclick="closeServerForm()">
               Abbrechen
             </button>
 
@@ -696,64 +1296,54 @@
         </div>
 
 
-        <div
-          id="serversList"
-          class="cards"
-        ></div>
+        <br>
+
+        <div id="serversList"
+          class="grid grid-2"></div>
 
       </section>
 
 
-      <!-- PROFIL -->
+      <!-- PROFILE -->
 
       <section id="profile" class="page">
 
         <div class="page-header">
 
           <div>
-
             <h2>Profil</h2>
-
-            <p>
-              Deine Spielerdaten.
-            </p>
-
+            <p>Deine Leitstellen-Spielerdaten.</p>
           </div>
 
         </div>
 
+        <div class="card">
 
-        <div class="panel">
+          <div class="list">
 
-          <div class="profile-row">
+            <div class="list-item">
+              <div class="list-main">
+                <div class="list-title">Anzeigename</div>
+              </div>
 
-            <span>Anzeigename</span>
+              <strong id="profileName">-</strong>
+            </div>
 
-            <strong id="profileName">
-              -
-            </strong>
+            <div class="list-item">
+              <div class="list-main">
+                <div class="list-title">E-Mail</div>
+              </div>
 
-          </div>
+              <strong id="profileEmail">-</strong>
+            </div>
 
+            <div class="list-item">
+              <div class="list-main">
+                <div class="list-title">Aktueller Server</div>
+              </div>
 
-          <div class="profile-row">
-
-            <span>E-Mail</span>
-
-            <strong id="profileEmail">
-              -
-            </strong>
-
-          </div>
-
-
-          <div class="profile-row">
-
-            <span>Server</span>
-
-            <strong id="profileServer">
-              -
-            </strong>
+              <strong id="profileServer">-</strong>
+            </div>
 
           </div>
 
@@ -766,32 +1356,25 @@
 
   </div>
 
-</div>
+</section>
 
 
 <!-- ALARM -->
 
-<div
-  id="alarmOverlay"
-  class="alarm-overlay hidden"
->
+<div id="alarmOverlay">
 
   <div class="alarm-box">
 
-    <div class="alarm-symbol">
-      🚨
-    </div>
+    <div class="alarm-icon">🚨</div>
 
-    <h2>ALARM</h2>
+    <h2>ALARM!</h2>
 
     <p id="alarmText">
       Neuer Einsatz
     </p>
 
-    <button
-      class="primary"
-      onclick="closeAlarm()"
-    >
+    <button class="primary"
+      onclick="closeAlarm()">
       Alarm bestätigen
     </button>
 
@@ -803,22 +1386,2375 @@
 <div id="toastContainer"></div>
 
 
-<audio
-  id="melderAudio"
-  src="assets/melder.mp3"
-  preload="auto"
-></audio>
-
-
 <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
-
 <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-auth-compat.js"></script>
-
 <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore-compat.js"></script>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<script src="app.js"></script>
+
+<script>
+
+/* =========================================================
+   FIREBASE
+   =========================================================
+
+   HIER DEINE FIREBASE-DATEN EINTRAGEN.
+*/
+
+const firebaseConfig = {
+
+  apiKey:"DEINE_API_KEY",
+
+  authDomain:"DEIN_PROJEKT.firebaseapp.com",
+
+  projectId:"DEIN_PROJEKT",
+
+  storageBucket:"DEIN_PROJEKT.firebasestorage.app",
+
+  messagingSenderId:"DEINE_MESSAGING_ID",
+
+  appId:"DEINE_APP_ID"
+
+};
+
+
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+
+/* =========================================================
+   GLOBALER STATE
+========================================================= */
+
+let currentUser = null;
+let currentServer = null;
+
+let unsubscribeServers = null;
+let unsubscribePlayers = null;
+let unsubscribeVehicles = null;
+let unsubscribeOperations = null;
+let unsubscribeRadio = null;
+
+let vehicles = [];
+let operations = [];
+let players = [];
+let radioMessages = [];
+
+let map = null;
+
+let vehicleMarkers = {};
+let operationMarkers = {};
+
+let micStream = null;
+let mediaRecorder = null;
+
+
+/* =========================================================
+   DOM
+========================================================= */
+
+const authScreen =
+  document.getElementById("authScreen");
+
+const app =
+  document.getElementById("app");
+
+const authButton =
+  document.getElementById("authButton");
+
+const loginTab =
+  document.getElementById("loginTab");
+
+const registerTab =
+  document.getElementById("registerTab");
+
+const displayNameField =
+  document.getElementById("displayNameField");
+
+let authMode = "login";
+
+
+/* =========================================================
+   AUTH TABS
+========================================================= */
+
+loginTab.onclick = () => {
+
+  authMode = "login";
+
+  loginTab.classList.add("active");
+  registerTab.classList.remove("active");
+
+  displayNameField.classList.add("hidden");
+
+  authButton.textContent = "Anmelden";
+
+};
+
+
+registerTab.onclick = () => {
+
+  authMode = "register";
+
+  registerTab.classList.add("active");
+  loginTab.classList.remove("active");
+
+  displayNameField.classList.remove("hidden");
+
+  authButton.textContent = "Konto erstellen";
+
+};
+
+
+/* =========================================================
+   AUTH
+========================================================= */
+
+authButton.onclick = async () => {
+
+  const email =
+    document.getElementById("authEmail").value.trim();
+
+  const password =
+    document.getElementById("authPassword").value;
+
+  const name =
+    document.getElementById("displayName").value.trim();
+
+  showAuthError("");
+
+  if(!email || !password){
+
+    showAuthError(
+      "Bitte E-Mail und Passwort eingeben."
+    );
+
+    return;
+  }
+
+
+  try{
+
+    if(authMode === "login"){
+
+      await auth.signInWithEmailAndPassword(
+        email,
+        password
+      );
+
+    }else{
+
+      if(!name){
+
+        showAuthError(
+          "Bitte einen Anzeigenamen eingeben."
+        );
+
+        return;
+      }
+
+      const result =
+        await auth.createUserWithEmailAndPassword(
+          email,
+          password
+        );
+
+      await db
+        .collection("users")
+        .doc(result.user.uid)
+        .set({
+
+          uid:result.user.uid,
+
+          email:email,
+
+          displayName:name,
+
+          createdAt:
+            firebase.firestore.FieldValue.serverTimestamp()
+
+        });
+
+    }
+
+  }catch(error){
+
+    showAuthError(
+      translateFirebaseError(error)
+    );
+
+  }
+
+};
+
+
+function showAuthError(message){
+
+  const box =
+    document.getElementById("authError");
+
+  if(!message){
+
+    box.classList.add("hidden");
+
+    return;
+  }
+
+  box.textContent = message;
+  box.classList.remove("hidden");
+
+}
+
+
+function translateFirebaseError(error){
+
+  const code = error.code || "";
+
+  const errors = {
+
+    "auth/invalid-email":
+      "Die E-Mail-Adresse ist ungültig.",
+
+    "auth/user-not-found":
+      "Dieses Konto wurde nicht gefunden.",
+
+    "auth/wrong-password":
+      "Das Passwort ist falsch.",
+
+    "auth/email-already-in-use":
+      "Diese E-Mail wird bereits verwendet.",
+
+    "auth/weak-password":
+      "Das Passwort ist zu schwach.",
+
+    "auth/invalid-credential":
+      "E-Mail oder Passwort ist falsch."
+
+  };
+
+  return errors[code] ||
+    error.message ||
+    "Ein unbekannter Fehler ist aufgetreten.";
+
+}
+
+
+/* =========================================================
+   AUTH STATE
+========================================================= */
+
+auth.onAuthStateChanged(async user => {
+
+  if(user){
+
+    currentUser = user;
+
+    authScreen.classList.add("hidden");
+    app.classList.remove("hidden");
+
+    await loadProfile();
+
+    listenServers();
+
+    await autoJoinServer();
+
+    updateProfile();
+
+  }else{
+
+    currentUser = null;
+
+    app.classList.add("hidden");
+    authScreen.classList.remove("hidden");
+
+    cleanupListeners();
+
+  }
+
+});
+
+
+/* =========================================================
+   PROFILE
+========================================================= */
+
+let profile = null;
+
+async function loadProfile(){
+
+  const snap =
+    await db
+      .collection("users")
+      .doc(currentUser.uid)
+      .get();
+
+  profile =
+    snap.exists
+      ? snap.data()
+      : {
+          displayName:
+            currentUser.email.split("@")[0]
+        };
+
+}
+
+
+function updateProfile(){
+
+  document.getElementById("profileName")
+    .textContent =
+      profile?.displayName || "-";
+
+  document.getElementById("profileEmail")
+    .textContent =
+      currentUser.email || "-";
+
+  document.getElementById("profileServer")
+    .textContent =
+      currentServer?.name || "Keiner";
+
+}
+
+
+/* =========================================================
+   LOGOUT
+========================================================= */
+
+document.getElementById("logoutButton").onclick =
+  async () => {
+
+    cleanupListeners();
+
+    await auth.signOut();
+
+  };
+
+
+/* =========================================================
+   SERVER
+========================================================= */
+
+function listenServers(){
+
+  if(unsubscribeServers)
+    unsubscribeServers();
+
+  unsubscribeServers =
+    db
+      .collection("servers")
+      .orderBy("createdAt","desc")
+      .onSnapshot(snapshot => {
+
+        const list = [];
+
+        snapshot.forEach(doc => {
+
+          list.push({
+            id:doc.id,
+            ...doc.data()
+          });
+
+        });
+
+        renderServers(list);
+
+      });
+
+}
+
+
+async function autoJoinServer(){
+
+  const saved =
+    localStorage.getItem("leitstelle_server");
+
+  if(saved){
+
+    const ref =
+      await db
+        .collection("servers")
+        .doc(saved)
+        .get();
+
+    if(ref.exists){
+
+      await joinServer({
+        id:ref.id,
+        ...ref.data()
+      });
+
+      return;
+    }
+
+  }
+
+}
+
+
+function openServerForm(){
+
+  document
+    .getElementById("serverForm")
+    .classList.remove("hidden");
+
+}
+
+
+function closeServerForm(){
+
+  document
+    .getElementById("serverForm")
+    .classList.add("hidden");
+
+}
+
+
+async function createServer(){
+
+  const name =
+    document
+      .getElementById("serverName")
+      .value
+      .trim();
+
+  const description =
+    document
+      .getElementById("serverDescription")
+      .value
+      .trim();
+
+  if(!name){
+
+    toast(
+      "Server",
+      "Bitte einen Servernamen eingeben.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  const ref =
+    await db
+      .collection("servers")
+      .add({
+
+        name:name,
+
+        description:
+          description || "Leitstellenserver",
+
+        ownerId:
+          currentUser.uid,
+
+        ownerName:
+          profile.displayName,
+
+        createdAt:
+          firebase.firestore.FieldValue.serverTimestamp()
+
+      });
+
+
+  toast(
+    "Server erstellt",
+    name,
+    "success"
+  );
+
+
+  closeServerForm();
+
+
+  await joinServer({
+    id:ref.id,
+    name:name,
+    description:description
+  });
+
+}
+
+
+function renderServers(list){
+
+  const container =
+    document.getElementById("serversList");
+
+  container.innerHTML = "";
+
+
+  if(!list.length){
+
+    container.innerHTML = `
+      <div class="card">
+        Noch keine Server vorhanden.
+      </div>
+    `;
+
+    return;
+  }
+
+
+  list.forEach(server => {
+
+    const div =
+      document.createElement("div");
+
+    div.className = "card server-card";
+
+    const active =
+      currentServer?.id === server.id;
+
+    div.innerHTML = `
+
+      <div class="card-title">
+        🖥️ ${escapeHTML(server.name)}
+      </div>
+
+      <div class="list-sub">
+        ${escapeHTML(
+          server.description || ""
+        )}
+      </div>
+
+      <div class="server-actions">
+
+        <button
+          class="action-btn ${active ? "green" : "blue"}"
+          onclick="joinServerById('${server.id}')">
+
+          ${active ? "✓ Verbunden" : "Beitreten"}
+
+        </button>
+
+      </div>
+    `;
+
+    container.appendChild(div);
+
+  });
+
+}
+
+
+async function joinServerById(id){
+
+  const snap =
+    await db
+      .collection("servers")
+      .doc(id)
+      .get();
+
+  if(!snap.exists)
+    return;
+
+  await joinServer({
+    id:snap.id,
+    ...snap.data()
+  });
+
+}
+
+
+async function joinServer(server){
+
+  cleanupServerListeners();
+
+  currentServer = server;
+
+  localStorage.setItem(
+    "leitstelle_server",
+    server.id
+  );
+
+
+  document.getElementById(
+    "currentServerName"
+  ).textContent =
+    server.name;
+
+
+  updateProfile();
+
+
+  listenPlayers();
+  listenVehicles();
+  listenOperations();
+  listenRadio();
+
+
+  toast(
+    "Server",
+    `Verbunden mit ${server.name}`,
+    "success"
+  );
+
+  renderServersFromFirestore();
+
+}
+
+
+async function renderServersFromFirestore(){
+
+  const snap =
+    await db
+      .collection("servers")
+      .orderBy("createdAt","desc")
+      .get();
+
+  const list = [];
+
+  snap.forEach(doc => {
+
+    list.push({
+      id:doc.id,
+      ...doc.data()
+    });
+
+  });
+
+  renderServers(list);
+
+}
+
+
+/* =========================================================
+   PLAYERS / ONLINE
+========================================================= */
+
+function listenPlayers(){
+
+  if(!currentServer)
+    return;
+
+  const ref =
+    db
+      .collection("servers")
+      .doc(currentServer.id)
+      .collection("players");
+
+  unsubscribePlayers =
+    ref.onSnapshot(snapshot => {
+
+      players = [];
+
+      snapshot.forEach(doc => {
+
+        players.push({
+          id:doc.id,
+          ...doc.data()
+        });
+
+      });
+
+      document.getElementById(
+        "onlineCounter"
+      ).textContent =
+        `● ${players.length} online`;
+
+      document.getElementById(
+        "statPlayers"
+      ).textContent =
+        players.length;
+
+    });
+
+
+  ref
+    .doc(currentUser.uid)
+    .set({
+
+      uid:currentUser.uid,
+
+      name:
+        profile.displayName,
+
+      joinedAt:
+        firebase.firestore.FieldValue.serverTimestamp()
+
+    },{merge:true});
+
+}
+
+
+/* =========================================================
+   VEHICLES
+========================================================= */
+
+function listenVehicles(){
+
+  if(!currentServer)
+    return;
+
+  unsubscribeVehicles =
+    db
+      .collection("servers")
+      .doc(currentServer.id)
+      .collection("vehicles")
+      .onSnapshot(snapshot => {
+
+        vehicles = [];
+
+        snapshot.forEach(doc => {
+
+          vehicles.push({
+            id:doc.id,
+            ...doc.data()
+          });
+
+        });
+
+        renderVehicles();
+        updateDashboard();
+
+        updateMap();
+
+      });
+
+}
+
+
+function openVehicleForm(){
+
+  document
+    .getElementById("vehicleForm")
+    .classList.remove("hidden");
+
+}
+
+
+function closeVehicleForm(){
+
+  document
+    .getElementById("vehicleForm")
+    .classList.add("hidden");
+
+}
+
+
+async function createVehicle(){
+
+  if(!currentServer){
+
+    toast(
+      "Fahrzeug",
+      "Bitte zuerst einem Server beitreten.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  const callsign =
+    document
+      .getElementById("vehicleCallsign")
+      .value
+      .trim();
+
+  const type =
+    document
+      .getElementById("vehicleType")
+      .value;
+
+  const seats =
+    Number(
+      document
+        .getElementById("vehicleSeats")
+        .value
+    );
+
+
+  if(!callsign){
+
+    toast(
+      "Fahrzeug",
+      "Funkrufname fehlt.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  await serverCollection("vehicles").add({
+
+    callsign,
+
+    type,
+
+    seats,
+
+    crew:[],
+
+    status:"Frei",
+
+    latitude:49.415,
+    longitude:11.011,
+
+    createdBy:currentUser.uid,
+
+    createdAt:
+      firebase.firestore.FieldValue.serverTimestamp()
+
+  });
+
+
+  closeVehicleForm();
+
+
+  toast(
+    "Fahrzeug",
+    `${callsign} wurde erstellt.`,
+    "success"
+  );
+
+}
+
+
+function renderVehicles(){
+
+  const container =
+    document.getElementById("vehiclesList");
+
+  container.innerHTML = "";
+
+
+  if(!vehicles.length){
+
+    container.innerHTML = `
+      <div class="card">
+        Noch keine Fahrzeuge vorhanden.
+      </div>
+    `;
+
+    return;
+  }
+
+
+  vehicles.forEach(vehicle => {
+
+    const div =
+      document.createElement("div");
+
+    div.className = "card";
+
+
+    const statusClass =
+      vehicle.status === "Frei"
+        ? "green"
+        : vehicle.status === "Einsatz"
+          ? "red"
+          : "yellow";
+
+
+    const crew =
+      vehicle.crew || [];
+
+
+    div.innerHTML = `
+
+      <div class="stat">
+
+        <div>
+
+          <div class="card-title">
+            🚒 ${escapeHTML(vehicle.callsign)}
+          </div>
+
+          <div class="list-sub">
+            ${escapeHTML(vehicle.type || "")}
+          </div>
+
+        </div>
+
+        <span class="badge ${statusClass}">
+          ${escapeHTML(vehicle.status || "Frei")}
+        </span>
+
+      </div>
+
+
+      <br>
+
+
+      <div class="list-sub">
+
+        Besatzung:
+        ${crew.length}/${vehicle.seats || 0}
+
+      </div>
+
+
+      <br>
+
+
+      <div class="actions">
+
+        <button
+          class="action-btn green"
+          onclick="occupyVehicle('${vehicle.id}')">
+
+          👤 Besetzen
+
+        </button>
+
+        <button
+          class="action-btn blue"
+          onclick="setVehicleStatus('${vehicle.id}','Einsatz')">
+
+          🚨 Alarmieren
+
+        </button>
+
+        <button
+          class="action-btn"
+          onclick="setVehicleStatus('${vehicle.id}','Frei')">
+
+          🟢 Frei
+
+        </button>
+
+      </div>
+    `;
+
+
+    container.appendChild(div);
+
+  });
+
+}
+
+
+async function occupyVehicle(id){
+
+  const ref =
+    serverCollection("vehicles")
+      .doc(id);
+
+  const snap =
+    await ref.get();
+
+  if(!snap.exists)
+    return;
+
+
+  const vehicle = snap.data();
+
+  const crew =
+    vehicle.crew || [];
+
+
+  if(crew.some(x => x.uid === currentUser.uid)){
+
+    toast(
+      "Besatzung",
+      "Du sitzt bereits auf diesem Fahrzeug.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  if(crew.length >= vehicle.seats){
+
+    toast(
+      "Besatzung",
+      "Keine freien Besatzungsplätze.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  crew.push({
+
+    uid:currentUser.uid,
+
+    name:profile.displayName
+
+  });
+
+
+  await ref.update({
+
+    crew
+
+  });
+
+
+  toast(
+    "Besatzung",
+    `${vehicle.callsign}: Platz belegt.`,
+    "success"
+  );
+
+}
+
+
+async function setVehicleStatus(id,status){
+
+  await serverCollection("vehicles")
+    .doc(id)
+    .update({
+
+      status
+
+    });
+
+
+  toast(
+    "Fahrzeug",
+    `Status: ${status}`,
+    "success"
+  );
+
+}
+
+
+/* =========================================================
+   OPERATIONS
+========================================================= */
+
+function listenOperations(){
+
+  unsubscribeOperations =
+    serverCollection("operations")
+      .orderBy("createdAt","desc")
+      .onSnapshot(snapshot => {
+
+        operations = [];
+
+        snapshot.forEach(doc => {
+
+          operations.push({
+            id:doc.id,
+            ...doc.data()
+          });
+
+        });
+
+        renderOperations();
+        updateDashboard();
+        updateMap();
+
+        if(
+          operations.length &&
+          operations[0].createdBy !== currentUser.uid
+        ){
+
+          showAlarm(operations[0]);
+
+        }
+
+      });
+
+}
+
+
+function openOperationForm(){
+
+  document
+    .getElementById("operationForm")
+    .classList.remove("hidden");
+
+}
+
+
+function closeOperationForm(){
+
+  document
+    .getElementById("operationForm")
+    .classList.add("hidden");
+
+}
+
+
+async function createOperation(data=null){
+
+  if(!currentServer){
+
+    toast(
+      "Einsatz",
+      "Bitte einem Server beitreten.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  const operation = data || {
+
+    keyword:
+      document.getElementById("opKeyword").value,
+
+    priority:
+      Number(
+        document.getElementById("opPriority").value
+      ),
+
+    address:
+      document.getElementById("opAddress").value,
+
+    caller:
+      document.getElementById("opCaller").value,
+
+    phone:
+      document.getElementById("opPhone").value,
+
+    description:
+      document.getElementById("opDescription").value
+
+  };
+
+
+  if(!operation.keyword){
+
+    toast(
+      "Einsatz",
+      "Bitte ein Einsatzstichwort eingeben.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  await serverCollection("operations")
+    .add({
+
+      ...operation,
+
+      status:"Offen",
+
+      alarmedVehicles:[],
+
+      latitude:
+        operation.latitude || 49.415,
+
+      longitude:
+        operation.longitude || 11.011,
+
+      createdBy:
+        currentUser.uid,
+
+      createdByName:
+        profile.displayName,
+
+      createdAt:
+        firebase.firestore.FieldValue.serverTimestamp()
+
+    });
+
+
+  closeOperationForm();
+
+
+  toast(
+    "Einsatz",
+    "Einsatz wurde angelegt.",
+    "success"
+  );
+
+
+  playAlarm();
+
+}
+
+
+function renderOperations(){
+
+  const container =
+    document.getElementById("operationsList");
+
+  container.innerHTML = "";
+
+
+  if(!operations.length){
+
+    container.innerHTML = `
+      <div class="card">
+        Keine aktiven Einsätze.
+      </div>
+    `;
+
+    return;
+  }
+
+
+  operations.forEach(op => {
+
+    const div =
+      document.createElement("div");
+
+    div.className = "card";
+
+
+    const priorityClass =
+      op.priority === 3
+        ? "red"
+        : op.priority === 2
+          ? "yellow"
+          : "blue";
+
+
+    div.innerHTML = `
+
+      <div class="stat">
+
+        <div>
+
+          <div class="card-title">
+            🚨 ${escapeHTML(op.keyword || "Einsatz")}
+          </div>
+
+          <div class="list-sub">
+            📍 ${escapeHTML(op.address || "Keine Adresse")}
+          </div>
+
+        </div>
+
+        <span class="badge ${priorityClass}">
+          P${op.priority || 1}
+        </span>
+
+      </div>
+
+
+      <br>
+
+
+      <div class="list">
+
+        <div class="list-item">
+
+          <div class="list-main">
+
+            <div class="list-title">
+              Anrufer
+            </div>
+
+            <div class="list-sub">
+              ${escapeHTML(op.caller || "-")}
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <div class="list-item">
+
+          <div class="list-main">
+
+            <div class="list-title">
+              Beschreibung
+            </div>
+
+            <div class="list-sub">
+              ${escapeHTML(op.description || "-")}
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <br>
+
+
+      <div class="actions">
+
+        <button
+          class="action-btn red"
+          onclick="alarmVehicles('${op.id}')">
+
+          🚨 Fahrzeuge alarmieren
+
+        </button>
+
+        <button
+          class="action-btn green"
+          onclick="finishOperation('${op.id}')">
+
+          ✓ Einsatz beenden
+
+        </button>
+
+      </div>
+
+    `;
+
+
+    container.appendChild(div);
+
+  });
+
+}
+
+
+async function alarmVehicles(operationId){
+
+  const selected =
+    vehicles.filter(
+      v => v.status === "Frei"
+    );
+
+
+  if(!selected.length){
+
+    toast(
+      "Alarmierung",
+      "Keine freien Fahrzeuge.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  const ids =
+    selected.map(v => v.id);
+
+
+  await serverCollection("operations")
+    .doc(operationId)
+    .update({
+
+      alarmedVehicles:ids,
+
+      status:"Alarmiert"
+
+    });
+
+
+  const batch =
+    db.batch();
+
+
+  selected.forEach(vehicle => {
+
+    batch.update(
+      serverCollection("vehicles")
+        .doc(vehicle.id),
+
+      {
+        status:"Einsatz"
+      }
+
+    );
+
+  });
+
+
+  await batch.commit();
+
+
+  toast(
+    "Alarmierung",
+    `${selected.length} Fahrzeuge alarmiert.`,
+    "success"
+  );
+
+
+  playAlarm();
+
+}
+
+
+async function finishOperation(id){
+
+  const snap =
+    await serverCollection("operations")
+      .doc(id)
+      .get();
+
+  if(!snap.exists)
+    return;
+
+
+  const op = snap.data();
+
+
+  const batch =
+    db.batch();
+
+
+  (op.alarmedVehicles || [])
+    .forEach(vehicleId => {
+
+      batch.update(
+        serverCollection("vehicles")
+          .doc(vehicleId),
+
+        {
+          status:"Frei"
+        }
+
+      );
+
+    });
+
+
+  batch.update(
+    serverCollection("operations")
+      .doc(id),
+
+    {
+
+      status:"Beendet",
+
+      endedAt:
+        firebase.firestore.FieldValue.serverTimestamp(),
+
+      endedBy:
+        currentUser.uid,
+
+      report:{
+        completed:true,
+        completedBy:profile.displayName
+      }
+
+    }
+
+  );
+
+
+  await batch.commit();
+
+
+  toast(
+    "Einsatz",
+    "Einsatz beendet.",
+    "success"
+  );
+
+}
+
+
+/* =========================================================
+   ÜBUNGSNOTRUF
+========================================================= */
+
+function createTrainingCall(){
+
+  const calls = [
+
+    {
+      keyword:"Brand Gebäude",
+      address:"Musterstraße 12, Stein",
+      caller:"Max Mustermann",
+      phone:"+49 170 123456",
+      description:
+        "Rauchentwicklung aus einem Gebäude. Mehrere Personen werden vermutet.",
+      priority:3
+    },
+
+    {
+      keyword:"Verkehrsunfall",
+      address:"Hauptstraße 45, Stein",
+      caller:"Anna Müller",
+      phone:"+49 171 987654",
+      description:
+        "Verkehrsunfall mit zwei beteiligten Fahrzeugen.",
+      priority:2
+    },
+
+    {
+      keyword:"Unklare Rauchentwicklung",
+      address:"Industriestraße 8, Stein",
+      caller:"Passant",
+      phone:"+49 160 555555",
+      description:
+        "Starke Rauchentwicklung im Bereich eines Gebäudes.",
+      priority:2
+    }
+
+  ];
+
+
+  const call =
+    calls[
+      Math.floor(
+        Math.random() * calls.length
+      )
+    ];
+
+
+  createOperation(call);
+
+}
+
+
+/* =========================================================
+   RADIO
+========================================================= */
+
+function listenRadio(){
+
+  unsubscribeRadio =
+    serverCollection("radio")
+      .orderBy("createdAt","asc")
+      .limitToLast(100)
+      .onSnapshot(snapshot => {
+
+        radioMessages = [];
+
+        snapshot.forEach(doc => {
+
+          radioMessages.push({
+            id:doc.id,
+            ...doc.data()
+          });
+
+        });
+
+        renderRadio();
+
+      });
+
+}
+
+
+function renderRadio(){
+
+  const container =
+    document.getElementById("radioMessages");
+
+  container.innerHTML = "";
+
+
+  radioMessages.forEach(message => {
+
+    const div =
+      document.createElement("div");
+
+    div.className =
+      "radio-message " +
+      (
+        message.uid === currentUser.uid
+          ? "mine"
+          : ""
+      );
+
+
+    let time = "";
+
+    if(message.createdAt?.toDate){
+
+      time =
+        message.createdAt
+          .toDate()
+          .toLocaleTimeString(
+            "de-DE",
+            {
+              hour:"2-digit",
+              minute:"2-digit"
+            }
+          );
+
+    }
+
+
+    div.innerHTML = `
+
+      <div class="radio-meta">
+        ${escapeHTML(message.name || "Unbekannt")}
+        ·
+        ${time}
+      </div>
+
+      <div class="radio-text">
+        ${escapeHTML(message.text || "")}
+      </div>
+
+    `;
+
+
+    container.appendChild(div);
+
+  });
+
+
+  container.scrollTop =
+    container.scrollHeight;
+
+}
+
+
+async function sendRadioMessage(){
+
+  const input =
+    document.getElementById("radioInput");
+
+  const text =
+    input.value.trim();
+
+
+  if(!text || !currentServer)
+    return;
+
+
+  await serverCollection("radio")
+    .add({
+
+      uid:currentUser.uid,
+
+      name:profile.displayName,
+
+      text,
+
+      createdAt:
+        firebase.firestore.FieldValue.serverTimestamp()
+
+    });
+
+
+  input.value = "";
+
+}
+
+
+document
+  .getElementById("radioInput")
+  .addEventListener(
+    "keydown",
+    e => {
+
+      if(e.key === "Enter")
+        sendRadioMessage();
+
+    }
+  );
+
+
+/* =========================================================
+   MIKROFON
+========================================================= */
+
+async function requestMic(){
+
+  try{
+
+    micStream =
+      await navigator.mediaDevices
+        .getUserMedia({
+          audio:true
+        });
+
+
+    toast(
+      "Mikrofon",
+      "Mikrofon-Berechtigung wurde erteilt.",
+      "success"
+    );
+
+
+    document.getElementById(
+      "micButton"
+    ).textContent =
+      "🎙 Mikrofon aktiv";
+
+
+  }catch(error){
+
+    toast(
+      "Mikrofon",
+      "Mikrofonzugriff wurde nicht erlaubt.",
+      "error"
+    );
+
+  }
+
+}
+
+
+document
+  .getElementById("micRecordButton")
+  .onclick = async () => {
+
+    if(!micStream){
+
+      await requestMic();
+
+      return;
+
+    }
+
+
+    if(
+      mediaRecorder &&
+      mediaRecorder.state === "recording"
+    ){
+
+      mediaRecorder.stop();
+
+      return;
+
+    }
+
+
+    mediaRecorder =
+      new MediaRecorder(micStream);
+
+
+    const chunks = [];
+
+
+    mediaRecorder.ondataavailable =
+      event => {
+
+        if(event.data.size)
+          chunks.push(event.data);
+
+      };
+
+
+    mediaRecorder.onstop = () => {
+
+      toast(
+        "Funk",
+        "Sprachaufnahme beendet.",
+        "success"
+      );
+
+    };
+
+
+    mediaRecorder.start();
+
+
+    document
+      .getElementById(
+        "micRecordButton"
+      )
+      .classList.add("recording");
+
+
+    mediaRecorder.onstop = () => {
+
+      document
+        .getElementById(
+          "micRecordButton"
+        )
+        .classList.remove("recording");
+
+      toast(
+        "Funk",
+        "Sprachaufnahme beendet.",
+        "success"
+      );
+
+    };
+
+  };
+
+
+/* =========================================================
+   ALARM
+========================================================= */
+
+function showAlarm(operation){
+
+  document.getElementById(
+    "alarmText"
+  ).textContent =
+    `${operation.keyword} — ${operation.address}`;
+
+  document
+    .getElementById("alarmOverlay")
+    .classList.add("active");
+
+  playAlarm();
+
+}
+
+
+function closeAlarm(){
+
+  document
+    .getElementById("alarmOverlay")
+    .classList.remove("active");
+
+}
+
+
+function playAlarm(){
+
+  try{
+
+    const AudioContext =
+      window.AudioContext ||
+      window.webkitAudioContext;
+
+    const ctx =
+      new AudioContext();
+
+
+    const oscillator =
+      ctx.createOscillator();
+
+    const gain =
+      ctx.createGain();
+
+
+    oscillator.type = "square";
+
+    oscillator.frequency.value = 900;
+
+    gain.gain.value = .15;
+
+
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+
+
+    oscillator.start();
+
+
+    let state = false;
+
+
+    const interval =
+      setInterval(() => {
+
+        state = !state;
+
+        oscillator.frequency.value =
+          state ? 900 : 650;
+
+      },350);
+
+
+    setTimeout(() => {
+
+      clearInterval(interval);
+
+      oscillator.stop();
+
+      ctx.close();
+
+    },3500);
+
+  }catch(e){}
+
+}
+
+
+/* =========================================================
+   MAP
+========================================================= */
+
+function initMap(){
+
+  if(map)
+    return;
+
+
+  map =
+    L.map("map")
+      .setView(
+        [49.415,11.011],
+        12
+      );
+
+
+  L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+      attribution:
+        "&copy; OpenStreetMap-Mitwirkende"
+    }
+  ).addTo(map);
+
+}
+
+
+function updateMap(){
+
+  if(!map)
+    return;
+
+
+  Object.values(vehicleMarkers)
+    .forEach(marker =>
+      marker.remove()
+    );
+
+
+  Object.values(operationMarkers)
+    .forEach(marker =>
+      marker.remove()
+    );
+
+
+  vehicleMarkers = {};
+  operationMarkers = {};
+
+
+  vehicles.forEach(vehicle => {
+
+    if(
+      typeof vehicle.latitude !== "number" ||
+      typeof vehicle.longitude !== "number"
+    )
+      return;
+
+
+    const marker =
+      L.marker([
+        vehicle.latitude,
+        vehicle.longitude
+      ]).addTo(map);
+
+
+    marker.bindPopup(`
+      <strong>🚒 ${escapeHTML(vehicle.callsign)}</strong>
+      <br>
+      ${escapeHTML(vehicle.type || "")}
+      <br>
+      Status:
+      ${escapeHTML(vehicle.status || "Frei")}
+    `);
+
+
+    vehicleMarkers[vehicle.id] =
+      marker;
+
+  });
+
+
+  operations
+    .filter(op => op.status !== "Beendet")
+    .forEach(op => {
+
+      if(
+        typeof op.latitude !== "number" ||
+        typeof op.longitude !== "number"
+      )
+        return;
+
+
+      const marker =
+        L.marker([
+          op.latitude,
+          op.longitude
+        ]).addTo(map);
+
+
+      marker.bindPopup(`
+        <strong>🚨 ${escapeHTML(op.keyword || "Einsatz")}</strong>
+        <br>
+        ${escapeHTML(op.address || "")}
+      `);
+
+
+      operationMarkers[op.id] =
+        marker;
+
+    });
+
+}
+
+
+function locateMe(){
+
+  if(!navigator.geolocation){
+
+    toast(
+      "Karte",
+      "Geolocation wird nicht unterstützt.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  navigator.geolocation.getCurrentPosition(
+    position => {
+
+      const lat =
+        position.coords.latitude;
+
+      const lon =
+        position.coords.longitude;
+
+
+      if(map){
+
+        map.setView(
+          [lat,lon],
+          16
+        );
+
+
+        L.marker([lat,lon])
+          .addTo(map)
+          .bindPopup("📍 Mein Standort")
+          .openPopup();
+
+      }
+
+    },
+
+    () => {
+
+      toast(
+        "Karte",
+        "Standort konnte nicht ermittelt werden.",
+        "error"
+      );
+
+    }
+
+  );
+
+}
+
+
+/* =========================================================
+   DASHBOARD
+========================================================= */
+
+function updateDashboard(){
+
+  const active =
+    operations.filter(
+      o => o.status !== "Beendet"
+    );
+
+
+  const free =
+    vehicles.filter(
+      v => v.status === "Frei"
+    );
+
+
+  document.getElementById(
+    "statOperations"
+  ).textContent =
+    active.length;
+
+
+  document.getElementById(
+    "statVehicles"
+  ).textContent =
+    vehicles.length;
+
+
+  document.getElementById(
+    "statFreeVehicles"
+  ).textContent =
+    free.length;
+
+
+  const opContainer =
+    document.getElementById(
+      "dashboardOperations"
+    );
+
+
+  opContainer.innerHTML = "";
+
+
+  active.slice(0,5)
+    .forEach(op => {
+
+      const div =
+        document.createElement("div");
+
+      div.className =
+        "list-item";
+
+
+      div.innerHTML = `
+
+        <div class="list-main">
+
+          <div class="list-title">
+            🚨 ${escapeHTML(op.keyword || "")}
+          </div>
+
+          <div class="list-sub">
+            ${escapeHTML(op.address || "")}
+          </div>
+
+        </div>
+
+        <span class="badge red">
+          P${op.priority || 1}
+        </span>
+
+      `;
+
+
+      opContainer.appendChild(div);
+
+    });
+
+
+  const vehicleContainer =
+    document.getElementById(
+      "dashboardVehicles"
+    );
+
+
+  vehicleContainer.innerHTML = "";
+
+
+  vehicles.slice(0,5)
+    .forEach(vehicle => {
+
+      const div =
+        document.createElement("div");
+
+      div.className =
+        "list-item";
+
+
+      const cls =
+        vehicle.status === "Frei"
+          ? "green"
+          : vehicle.status === "Einsatz"
+            ? "red"
+            : "yellow";
+
+
+      div.innerHTML = `
+
+        <div class="list-main">
+
+          <div class="list-title">
+            🚒 ${escapeHTML(vehicle.callsign)}
+          </div>
+
+          <div class="list-sub">
+            ${escapeHTML(vehicle.type || "")}
+          </div>
+
+        </div>
+
+        <span class="badge ${cls}">
+          ${escapeHTML(vehicle.status || "")}
+        </span>
+
+      `;
+
+
+      vehicleContainer.appendChild(div);
+
+    });
+
+}
+
+
+/* =========================================================
+   NAVIGATION
+========================================================= */
+
+document
+  .querySelectorAll(".nav-btn")
+  .forEach(button => {
+
+    button.onclick = () => {
+
+      document
+        .querySelectorAll(".nav-btn")
+        .forEach(b =>
+          b.classList.remove("active")
+        );
+
+
+      button.classList.add("active");
+
+
+      document
+        .querySelectorAll(".page")
+        .forEach(page =>
+          page.classList.remove("active")
+        );
+
+
+      const page =
+        document.getElementById(
+          button.dataset.page
+        );
+
+
+      if(page)
+        page.classList.add("active");
+
+
+      if(button.dataset.page === "mapPage"){
+
+        setTimeout(() => {
+
+          initMap();
+
+          map.invalidateSize();
+
+          updateMap();
+
+        },100);
+
+      }
+
+    };
+
+  });
+
+
+/* =========================================================
+   FIREBASE COLLECTION HELPER
+========================================================= */
+
+function serverCollection(name){
+
+  if(!currentServer)
+    throw new Error(
+      "Kein Server ausgewählt."
+    );
+
+
+  return db
+    .collection("servers")
+    .doc(currentServer.id)
+    .collection(name);
+
+}
+
+
+/* =========================================================
+   CLEANUP
+========================================================= */
+
+function cleanupServerListeners(){
+
+  [
+    "unsubscribePlayers",
+    "unsubscribeVehicles",
+    "unsubscribeOperations",
+    "unsubscribeRadio"
+  ].forEach(name => {
+
+    if(window[name]){
+      window[name]();
+      window[name] = null;
+    }
+
+  });
+
+}
+
+
+function cleanupListeners(){
+
+  cleanupServerListeners();
+
+  if(unsubscribeServers){
+
+    unsubscribeServers();
+
+    unsubscribeServers = null;
+
+  }
+
+}
+
+
+/* =========================================================
+   TOAST
+========================================================= */
+
+function toast(title,message,type=""){
+
+  const container =
+    document.getElementById(
+      "toastContainer"
+    );
+
+
+  const div =
+    document.createElement("div");
+
+  div.className =
+    `toast ${type}`;
+
+
+  div.innerHTML = `
+
+    <strong>${escapeHTML(title)}</strong>
+
+    ${escapeHTML(message)}
+
+  `;
+
+
+  container.appendChild(div);
+
+
+  setTimeout(() => {
+
+    div.remove();
+
+  },4000);
+
+}
+
+
+/* =========================================================
+   HTML ESCAPE
+========================================================= */
+
+function escapeHTML(value){
+
+  return String(value ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+
+}
+
+
+/* =========================================================
+   INITIAL
+========================================================= */
+
+window.addEventListener(
+  "beforeunload",
+  () => {
+
+    if(
+      currentServer &&
+      currentUser
+    ){
+
+      db
+        .collection("servers")
+        .doc(currentServer.id)
+        .collection("players")
+        .doc(currentUser.uid)
+        .delete()
+        .catch(()=>{});
+
+    }
+
+  }
+);
+
+</script>
 
 </body>
 </html>
