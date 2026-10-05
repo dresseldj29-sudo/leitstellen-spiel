@@ -1,147 +1,52 @@
 rules_version = '2';
 
 service cloud.firestore {
+  match /databases/{database}/documents {
 
-    match /databases/{database}/documents {
-
-
-        /* =================================================
-           BENUTZER
-        ================================================= */
-
-        match /users/{userId} {
-
-            allow read:
-                if request.auth != null
-                && request.auth.uid == userId;
-
-            allow create:
-                if request.auth != null
-                && request.auth.uid == userId;
-
-            allow update:
-                if request.auth != null
-                && request.auth.uid == userId;
-
-            allow delete:
-                if request.auth != null
-                && request.auth.uid == userId;
-
-        }
-
-
-        /* =================================================
-           SERVER
-        ================================================= */
-
-        match /servers/{serverId} {
-
-            allow read:
-                if request.auth != null;
-
-            allow create:
-                if request.auth != null;
-
-            allow update:
-                if request.auth != null;
-
-            allow delete:
-                if request.auth != null;
-
-
-            /* =============================================
-               SERVER SPIELER
-            ============================================= */
-
-            match /players/{playerId} {
-
-                allow read:
-                    if request.auth != null;
-
-                allow create:
-                    if request.auth != null;
-
-                allow update:
-                    if request.auth != null
-                    && (
-                        request.auth.uid ==
-                        playerId
-                        ||
-                        resource.data.uid ==
-                        request.auth.uid
-                    );
-
-                allow delete:
-                    if request.auth != null
-                    && request.auth.uid ==
-                       playerId;
-
-            }
-
-
-            /* =============================================
-               FAHRZEUGE
-            ============================================= */
-
-            match /vehicles/{vehicleId} {
-
-                allow read:
-                    if request.auth != null;
-
-                allow create:
-                    if request.auth != null;
-
-                allow update:
-                    if request.auth != null;
-
-                allow delete:
-                    if request.auth != null;
-
-            }
-
-
-            /* =============================================
-               EINSÄTZE
-            ============================================= */
-
-            match /operations/{operationId} {
-
-                allow read:
-                    if request.auth != null;
-
-                allow create:
-                    if request.auth != null;
-
-                allow update:
-                    if request.auth != null;
-
-                allow delete:
-                    if request.auth != null;
-
-            }
-
-
-            /* =============================================
-               FUNK
-            ============================================= */
-
-            match /radio/{messageId} {
-
-                allow read:
-                    if request.auth != null;
-
-                allow create:
-                    if request.auth != null;
-
-                allow update:
-                    if request.auth != null;
-
-                allow delete:
-                    if request.auth != null;
-
-            }
-
-        }
-
+    // Benutzer müssen eingeloggt sein
+    function signedIn() {
+      return request.auth != null;
     }
+
+    // Benutzerprofile
+    match /users/{userId} {
+      allow read, write: if signedIn()
+        && request.auth.uid == userId;
+    }
+
+    // Server
+    match /servers/{serverId} {
+      allow read, write: if signedIn();
+    }
+
+    // Spieler eines Servers
+    match /servers/{serverId}/players/{playerId} {
+      allow read, write: if signedIn();
+    }
+
+    // Fahrzeuge
+    match /servers/{serverId}/vehicles/{vehicleId} {
+      allow read, write: if signedIn();
+    }
+
+    // Einsätze
+    match /servers/{serverId}/missions/{missionId} {
+      allow read, write: if signedIn();
+    }
+
+    // Funknachrichten
+    match /servers/{serverId}/radio/{messageId} {
+      allow read, write: if signedIn();
+    }
+
+    // Einsatzberichte
+    match /servers/{serverId}/reports/{reportId} {
+      allow read, write: if signedIn();
+    }
+
+    // Allgemeine Serverdaten
+    match /servers/{serverId}/data/{dataId} {
+      allow read, write: if signedIn();
+    }
+  }
 }
